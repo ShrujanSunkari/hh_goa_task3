@@ -33,7 +33,7 @@ This pipeline solves a hard real-world problem in three automated stages:
 | **2 · OSINT Identification** | `modules/web_search.py` | The cropped face is submitted to SerpAPI Google Lens; top results are ranked by social-domain priority; the matched page URL and thumbnail are captured |
 | **3 · Blockchain Anchoring** | `modules/blockchain.py` | A SHA-256 fingerprint of `(source_url ‖ thumbnail_bytes ‖ metadata)` is submitted to a Solidity smart contract on Ethereum; the record is immutable and publicly verifiable |
 
-A fourth **Verification Stage** immediately re-reads the on-chain record and compares the local hash, producing cryptographic proof that the anchored record is uncorrupted.
+A fourth **Verification Stage** immediately re-reads the on-chain record and compares the local hash, producing cryptographic proof that the anchored record is uncorrupted. You can independently verify the record using the deployed contract on Sepolia Etherscan.
 
 ---
 
@@ -96,6 +96,9 @@ sequenceDiagram
 * **SHA-256 vs Keccak-256**: SHA-256 is used for the off-chain payload hash because it aligns with standard OSINT and forensic workflows. `bytes32` on-chain comfortably stores it, reducing the need for Solidity-specific tooling (like Keccak) when external auditors verify the proof.
 * **Local EVM vs Sepolia**: The pipeline supports an in-process Py-EVM. This delivers an instant, zero-cost, zero-latency demonstration without requiring testnet ETH, Infura keys, or waiting for block confirmations, while retaining the ability to deploy to the live Sepolia testnet when true immutability is needed.
 * **Multi-engine Search**: We query SerpAPI (Google Lens), Bing Visual Search, and Yandex. This dramatically improves recall because each engine indexes different portions of the web and has different regional strengths, ensuring a higher likelihood of identity resolution.
+
+## Live on Sepolia
+[![Contract on Sepolia](https://img.shields.io/badge/Sepolia-Contract-blue)](https://sepolia.etherscan.io/address/<YOUR_CONTRACT_ADDRESS>)
 
 ---
 
