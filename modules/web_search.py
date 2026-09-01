@@ -40,6 +40,8 @@ from typing import Dict, List, Optional
 from urllib.parse import urlparse
 
 import requests
+import cv2
+import numpy as np
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
@@ -138,25 +140,22 @@ class WebSearchEngine:
     def search_by_image(
         self,
         image_path: str,
+        original_image_path: Optional[str] = None,
         top_n: int = 5,
     ) -> Dict:
         """
-        Submit *image_path* to SerpAPI Google Lens and return the best match.
+        Submit *image_path* to SerpAPI Google Lens, Bing, and Yandex and return the best match.
+        Falls back to *original_image_path* if crop yields no results.
 
         Parameters
         ----------
         image_path : Path to the face crop (JPG / PNG).
+        original_image_path : Optional path to the full image.
         top_n      : How many raw matches to preserve in ``raw_matches``.
 
         Returns
         -------
         dict — see module docstring for schema.
-
-        Raises
-        ------
-        EnvironmentError  if SERPAPI_KEY is missing.
-        FileNotFoundError if image_path does not exist.
-        RuntimeError      if the API returns an error or no matches found.
         """
         img_path = self._validate_image(image_path)
 
@@ -170,28 +169,42 @@ class WebSearchEngine:
             return _search_cache[img_hash]
 
         console.log(
-            f"[bold cyan]WebSearchEngine[/] → Google Lens on "
+            f"[bold cyan]WebSearchEngine[/] → Searching on "
             f"[yellow]{image_path}[/]"
         )
 
-        # ── Upload image & call SerpAPI ───────────────────────────────────────
-        raw_matches = []
-        fallback_reason = "No image results found"
-        try:
-            self._require_key()
-            raw_response = self._call_serpapi(img_path)
-            raw_matches  = raw_response.get("visual_matches", [])
-        except (EnvironmentError, RuntimeError) as e:
-            fallback_reason = str(e)
-            console.log(f"[yellow]SerpAPI encountered an error: {e}[/]")
+        def _run_searches(search_img: str) -> List[_Match]:
+            # 1. SerpAPI (Google Lens)
+            raw_serp = []
+            try:
+                self._require_key()
+                raw_response = self._call_serpapi(search_img)
+                raw_serp  = raw_response.get("visual_matches", [])
+            except (EnvironmentError, RuntimeError) as e:
+                console.log(f"[yellow]SerpAPI encountered an error: {e}[/]")
 
-        if not raw_matches:
-            console.log(f"[yellow]Trying Bing fallback. Reason: {fallback_reason}[/]")
-            raw_matches = self._bing_search(img_path)
+            # 2. Bing
+            raw_bing = self._bing_search(search_img)
+            
+            # 3. Yandex
+            raw_yandex = self._yandex_search(search_img)
+            
+            return _merge_and_deduplicate([raw_serp, raw_bing, raw_yandex])
 
-        if not raw_matches:
+        # Enhance the crop first
+        enhanced_img = self._enhance_image(img_path)
+        scored = _run_searches(enhanced_img)
+        
+        # Fallback to full image if no matches
+        if not scored and original_image_path:
+            console.log("[INFO] No matches with face crop. Retrying with full image for better context...")
+            orig_img_path = self._validate_image(original_image_path)
+            enhanced_orig = self._enhance_image(orig_img_path)
+            scored = _run_searches(enhanced_orig)
+
+        if not scored:
             _warn(
-                "Google Lens and Bing returned no visual matches for this image.\n"
+                "Search engines returned no visual matches for this image.\n"
                 "• Ensure the face crop is clear and well-lit.\n"
                 "• The person may not have a public web presence."
             )
@@ -199,14 +212,22 @@ class WebSearchEngine:
             _search_cache[img_hash] = payload
             return payload
 
-        # ── Sort / prioritise ─────────────────────────────────────────────────
-        scored   = _score_matches(raw_matches)
-        best     = scored[0]
+        best = scored[0]
 
         # ── Download thumbnail ────────────────────────────────────────────────
         image_bytes = _download_bytes(best.thumbnail_url)
 
         # ── Build payload ─────────────────────────────────────────────────────
+        raw_matches = [
+            {
+                "title": m.title,
+                "link": m.source_url,
+                "domain": m.domain,
+                "thumbnail": m.thumbnail_url
+            }
+            for m in scored[:top_n]
+        ]
+        
         payload: Dict = {
             "title":          best.title,
             "source_url":     best.source_url,
@@ -214,7 +235,7 @@ class WebSearchEngine:
             "thumbnail_url":  best.thumbnail_url,
             "image_bytes":    image_bytes,
             "confidence_bps": best.confidence_bps,
-            "raw_matches":    raw_matches[:top_n],
+            "raw_matches":    raw_matches,
         }
 
         _print_result(payload, scored[:top_n])
@@ -431,53 +452,176 @@ class WebSearchEngine:
             return []
 
 
+    def _yandex_search(self, image_path: str) -> List[Dict]:
+        """
+        Fallback search using Yandex Reverse Image Search API via HTML parsing.
+        """
+        endpoint = "https://yandex.com/images/search?rpt=imageview"
+        
+        console.log("[dim]Uploading face crop to Yandex Image Search...[/]")
+        try:
+            with open(image_path, "rb") as fh:
+                files = {'upfile': ('image.jpg', fh, 'image/jpeg')}
+                resp = requests.post(endpoint, files=files, timeout=30)
+            
+            resp.raise_for_status()
+            
+            raw_matches = []
+            import json
+            import re
+            
+            # Yandex embeds JSON state in the HTML
+            # Look for the state object
+            match = re.search(r'data-state="([^"]+)"', resp.text)
+            if match:
+                import html
+                state_json_str = html.unescape(match.group(1))
+                try:
+                    state = json.loads(state_json_str)
+                    
+                    # Dig through Yandex's insane JSON structure
+                    # This is highly volatile and might break, but we'll try our best
+                    if "cbirPage" in state and "similar" in state["cbirPage"]:
+                        for item in state["cbirPage"]["similar"].get("items", []):
+                            raw_matches.append({
+                                "title": item.get("title", "Untitled"),
+                                "link": item.get("url", ""),
+                                "thumbnail": item.get("thumb", {}).get("url", "")
+                            })
+                except json.JSONDecodeError:
+                    pass
+                    
+            if not raw_matches:
+                # Fallback to simple regex if state object approach fails
+                # Look for typical Yandex result structures
+                urls = re.findall(r'"url":"([^"]+)"', resp.text)
+                titles = re.findall(r'"title":"([^"]+)"', resp.text)
+                thumbs = re.findall(r'"thumb":{"url":"([^"]+)"', resp.text)
+                
+                # Make sure we have some results
+                for i in range(min(len(urls), 20)):
+                    # Filter out obvious non-result URLs
+                    if "yandex" not in urls[i] and urls[i].startswith("http"):
+                        raw_matches.append({
+                            "title": titles[i] if i < len(titles) else "Untitled",
+                            "link": urls[i],
+                            "thumbnail": thumbs[i] if i < len(thumbs) else ""
+                        })
+            
+            # Simple deduplication just in case regex went wild
+            seen = set()
+            unique_matches = []
+            for m in raw_matches:
+                if m["link"] not in seen and m["link"]:
+                    seen.add(m["link"])
+                    unique_matches.append(m)
+
+            return unique_matches
+            
+        except Exception as exc:
+            console.log(f"[yellow]Yandex search failed: {exc}[/]")
+            return []
+
+    def _enhance_image(self, image_path: str) -> str:
+        """
+        Apply image enhancement (sharpening, contrast, upscale) before search.
+        Returns path to enhanced image.
+        """
+        console.log(f"[dim]Enhancing image for search: {image_path}[/]")
+        
+        try:
+            img = cv2.imread(image_path)
+            if img is None:
+                console.log("[yellow]Failed to read image for enhancement. Using original.[/]")
+                return image_path
+                
+            # 1. Sharpening
+            kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
+            img = cv2.filter2D(img, -1, kernel)
+            
+            # 2. Contrast enhancement (convertScaleAbs)
+            img = cv2.convertScaleAbs(img, alpha=1.2, beta=30)
+            
+            # 3. Upscale to at least 800px on shortest side
+            h, w = img.shape[:2]
+            shortest_side = min(h, w)
+            if shortest_side < 800:
+                scale = 800 / shortest_side
+                new_w = int(w * scale)
+                new_h = int(h * scale)
+                img = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_LANCZOS4)
+                
+            # Save enhanced image
+            out_path = "inputs/enhanced_crop.jpg"
+            cv2.imwrite(out_path, img)
+            return out_path
+            
+        except Exception as exc:
+            console.log(f"[yellow]Image enhancement failed: {exc}. Using original.[/]")
+            return image_path
+
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  Module-level utilities
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _score_matches(raw_matches: List[Dict]) -> List[_Match]:
+def _merge_and_deduplicate(results_lists: List[List[Dict]]) -> List[_Match]:
     """
-    Convert raw SerpAPI visual_matches to sorted _Match objects.
+    Merge raw matches from multiple engines, deduplicate by domain/title,
+    and convert to sorted _Match objects.
 
     Scoring Algorithm:
-      1. Base Score: Tapers down from 7500 based on original SerpAPI rank (min 1000).
-      2. Domain Bonus: +2500 for tier-1 social/authoritative domains (x.com, linkedin, instagram, etc.)
-                       +1500 for tier-2 news/entertainment databases (imdb, tmdb, bbc, etc.)
-      3. Domain Penalty: -5000 for junk, stock photos, or low-quality aggregators (pinterest, alamy, stock, tupaki, etc.)
+      1. Base Score: Tapers down from 7500 based on engine index and original rank (min 1000).
+      2. Domain Bonus: +2500 for tier-1 social/authoritative domains
+                       +1500 for tier-2 news/entertainment databases
+      3. Domain Penalty: -5000 for junk, stock photos, or low-quality aggregators
       4. Final Score: Clamped between 0 and 10000 (basis points).
     """
     scored: List[_Match] = []
-    for rank, item in enumerate(raw_matches):
-        url    = item.get("link", "")
-        domain = _extract_domain(url)
+    seen = set()
+    
+    for engine_idx, raw_matches in enumerate(results_lists):
+        for rank, item in enumerate(raw_matches):
+            url    = item.get("link", "")
+            domain = _extract_domain(url)
+            title  = item.get("title", "Untitled")
+            
+            # Deduplicate
+            dedup_key = f"{domain}:{title[:20].lower()}"
+            if url in seen or dedup_key in seen:
+                continue
+                
+            if url:
+                seen.add(url)
+            seen.add(dedup_key)
 
-        base_score = max(1000, 7500 - (rank * 200))
+            base_score = max(1000, 7500 - (engine_idx * 1000) - (rank * 200))
 
-        bonus = 0
-        penalty = 0
+            bonus = 0
+            penalty = 0
 
-        domain_lower = domain.lower()
-        if any(d in domain_lower for d in _AUTHORITATIVE_HIGH):
-            bonus = 2500
-        elif any(d in domain_lower for d in _AUTHORITATIVE_MED):
-            bonus = 1500
+            domain_lower = domain.lower()
+            if any(d in domain_lower for d in _AUTHORITATIVE_HIGH):
+                bonus = 2500
+            elif any(d in domain_lower for d in _AUTHORITATIVE_MED):
+                bonus = 1500
 
-        if any(d in domain_lower for d in _JUNK_DOMAINS):
-            penalty = 5000
+            if any(d in domain_lower for d in _JUNK_DOMAINS):
+                penalty = 5000
 
-        confidence_bps = max(0, min(10000, base_score + bonus - penalty))
+            confidence_bps = max(0, min(10000, base_score + bonus - penalty))
 
-        scored.append(
-            _Match(
-                title=item.get("title", "Untitled"),
-                source_url=url,
-                domain=domain,
-                thumbnail_url=item.get("thumbnail", ""),
-                rank=rank,
-                confidence_bps=confidence_bps,
+            scored.append(
+                _Match(
+                    title=title,
+                    source_url=url,
+                    domain=domain,
+                    thumbnail_url=item.get("thumbnail", "") or item.get("thumbnailUrl", ""),
+                    rank=rank,
+                    confidence_bps=confidence_bps,
+                )
             )
-        )
 
     # Sort descending by calculated confidence_bps (highest score #1)
     scored.sort(key=lambda m: (m.confidence_bps, -m.rank), reverse=True)

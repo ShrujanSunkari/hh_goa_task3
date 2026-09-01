@@ -238,11 +238,11 @@ def stage2_search(face: dict, args: argparse.Namespace) -> tuple[dict, dict]:
 
     from modules.web_search import WebSearchEngine
 
-    with _spinner("Executing Google Lens visual reverse search...", "bold yellow") as prog:
+    with _spinner("Executing multi-engine visual reverse search (SerpAPI, Bing, Yandex)...", "bold yellow") as prog:
         prog.add_task("")
         try:
             engine  = WebSearchEngine()
-            payload = engine.search_by_image(face["cropped_path"], top_n=args.top_n)
+            payload = engine.search_by_image(face["cropped_path"], original_image_path=args.image, top_n=args.top_n)
         except EnvironmentError as exc:
             _exit_err("Missing API Key", str(exc))
         except RuntimeError as exc:
