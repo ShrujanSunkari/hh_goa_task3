@@ -173,7 +173,7 @@ class WebSearchEngine:
             f"[yellow]{image_path}[/]"
         )
 
-        def _run_searches(search_img: str) -> List[_Match]:
+        def _run_searches(search_img: str) -> tuple[List[_Match], int]:
             # 1. SerpAPI (Google Lens)
             raw_serp = []
             try:
@@ -189,18 +189,19 @@ class WebSearchEngine:
             # 3. Yandex
             raw_yandex = self._yandex_search(search_img)
             
-            return _merge_and_deduplicate([raw_serp, raw_bing, raw_yandex])
+            engines_matched = sum(1 for eng_res in (raw_serp, raw_bing, raw_yandex) if eng_res)
+            return _merge_and_deduplicate([raw_serp, raw_bing, raw_yandex]), engines_matched
 
         # Enhance the crop first
         enhanced_img = self._enhance_image(img_path)
-        scored = _run_searches(enhanced_img)
+        scored, num_engines = _run_searches(enhanced_img)
         
         # Fallback to full image if no matches
         if not scored and original_image_path:
             console.log("[INFO] No matches with face crop. Retrying with full image for better context...")
             orig_img_path = self._validate_image(original_image_path)
             enhanced_orig = self._enhance_image(orig_img_path)
-            scored = _run_searches(enhanced_orig)
+            scored, num_engines = _run_searches(enhanced_orig)
 
         if not scored:
             _warn(
@@ -235,6 +236,7 @@ class WebSearchEngine:
             "thumbnail_url":  best.thumbnail_url,
             "image_bytes":    image_bytes,
             "confidence_bps": best.confidence_bps,
+            "num_engines_matched": num_engines,
             "raw_matches":    raw_matches,
         }
 
@@ -629,6 +631,7 @@ def _merge_and_deduplicate(results_lists: List[List[Dict]]) -> List[_Match]:
 
 
 def _extract_domain(url: str) -> str:
+    """Extract domain without www from URL."""
     try:
         host = urlparse(url).netloc.lower()
         # Strip www. prefix
@@ -652,6 +655,7 @@ def _download_bytes(url: str) -> bytes:
 
 
 def _empty_payload() -> Dict:
+    """Return an empty payload schema."""
     return {
         "title":          "",
         "source_url":     "",
@@ -664,12 +668,14 @@ def _empty_payload() -> Dict:
 
 
 def _warn(message: str) -> None:
+    """Print a warning panel."""
     console.print(
         Panel(f"[bold yellow]{message}[/]", title="⚠  No Matches", border_style="yellow")
     )
 
 
 def _print_result(payload: Dict, top_matches: List[_Match]) -> None:
+    """Print the final search results panel."""
     tbl = Table(title="🔍 Google Lens — OSINT Results", show_lines=True)
     tbl.add_column("#",          style="dim",         width=4)
     tbl.add_column("Domain",     style="bold cyan",   width=20)

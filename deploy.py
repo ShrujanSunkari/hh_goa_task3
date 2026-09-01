@@ -126,7 +126,7 @@ def compile_contract() -> tuple[list, str]:
 #  3. Web3 provider
 # ─────────────────────────────────────────────────────────────────────────────
 
-def build_w3(network: str):
+def build_w3(network: str) -> object:
     """
     Return a connected Web3 instance.
 
@@ -181,7 +181,7 @@ def build_w3(network: str):
 #  4. Deployment
 # ─────────────────────────────────────────────────────────────────────────────
 
-def deploy_contract(w3, abi: list, bytecode: str) -> dict:
+def deploy_contract(w3: object, abi: list, bytecode: str) -> dict:
     """
     Deploy IdentityRegistry and return a result dict with address + gas info.
     """
@@ -266,6 +266,7 @@ def persist_artifact(abi: list, bytecode: str, deploy_result: dict) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def verify_etherscan(deploy_result: dict, network: str) -> None:
+    """Submit source code to Etherscan for verification if on Sepolia."""
     if network != "sepolia":
         return
         
@@ -340,6 +341,7 @@ def verify_etherscan(deploy_result: dict, network: str) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def print_summary(deploy_result: dict) -> None:
+    """Print the final deployment summary table."""
     tbl = Table(show_header=False, box=None, padding=(0, 2))
     tbl.add_column("Key",   style="bold white", no_wrap=True)
     tbl.add_column("Value", style="cyan")

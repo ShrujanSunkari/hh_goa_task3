@@ -91,6 +91,12 @@ sequenceDiagram
 | **CLI / UX** | Rich | `13.7.1` | Spinners, styled panels, tables, proof display |
 | **Compiler** | py-solc-x (solc 0.8.24) | auto | Inline Solidity compilation |
 
+### Why This Stack – Engineering Decisions
+* **RetinaFace vs Haar Cascade**: RetinaFace is significantly more accurate and resilient to challenging angles and lighting compared to the older OpenCV Haar Cascades, which suffer from false positives and misses. Haar remains a fallback for environments without TensorFlow.
+* **SHA-256 vs Keccak-256**: SHA-256 is used for the off-chain payload hash because it aligns with standard OSINT and forensic workflows. `bytes32` on-chain comfortably stores it, reducing the need for Solidity-specific tooling (like Keccak) when external auditors verify the proof.
+* **Local EVM vs Sepolia**: The pipeline supports an in-process Py-EVM. This delivers an instant, zero-cost, zero-latency demonstration without requiring testnet ETH, Infura keys, or waiting for block confirmations, while retaining the ability to deploy to the live Sepolia testnet when true immutability is needed.
+* **Multi-engine Search**: We query SerpAPI (Google Lens), Bing Visual Search, and Yandex. This dramatically improves recall because each engine indexes different portions of the web and has different regional strengths, ensuring a higher likelihood of identity resolution.
+
 ---
 
 ## Quickstart Guide

@@ -133,7 +133,8 @@ class FaceDetector:
             f"(OpenCV {cv2.__version__} — method=[yellow]{method}[/])"
         )
 
-    def _init_db(self):
+    def _init_db(self) -> None:
+        """Initialise the SQLite caching database for embeddings."""
         db_path = _ROOT / "inputs" / "embeddings.db"
         db_path.parent.mkdir(parents=True, exist_ok=True)
         self.conn = sqlite3.connect(str(db_path))
@@ -143,6 +144,7 @@ class FaceDetector:
         self.conn.commit()
 
     def _get_cached_embedding(self, img_hash: str) -> Optional[List[float]]:
+        """Retrieve a cached embedding by image hash."""
         cur = self.conn.cursor()
         cur.execute("SELECT embedding FROM embeddings WHERE hash = ?", (img_hash,))
         row = cur.fetchone()
@@ -150,7 +152,8 @@ class FaceDetector:
             return np.frombuffer(row[0], dtype=np.float64).tolist()
         return None
 
-    def _cache_embedding(self, img_hash: str, embedding: List[float]):
+    def _cache_embedding(self, img_hash: str, embedding: List[float]) -> None:
+        """Cache a newly computed embedding."""
         emb_array = np.array(embedding, dtype=np.float64)
         self.conn.execute(
             "INSERT OR REPLACE INTO embeddings (hash, embedding) VALUES (?, ?)",
@@ -200,6 +203,7 @@ class FaceDetector:
                 "cropped_path": str(src),
                 "facial_area": region,
                 "confidence": 1.0,
+                "blur_score": 500.0,
                 "embedding": cached_emb,
             }
 
@@ -239,6 +243,9 @@ class FaceDetector:
 
         crop = img_bgr[y1:y2, x1:x2]
         
+        gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+        blur_score = cv2.Laplacian(gray, cv2.CV_64F).var()
+        
         if self.is_blurry(crop):
             console.log("[yellow]Warning: Cropped face appears blurry![/]")
             
@@ -255,6 +262,7 @@ class FaceDetector:
             "cropped_path": crop_path,
             "facial_area":  region,
             "confidence":   round(confidence, 4),
+            "blur_score":   blur_score,
             "embedding":    embedding,
         }
 
@@ -289,7 +297,7 @@ class FaceDetector:
             console.log(f"[yellow]Haar detection failed ({exc}), trying DNN...[/]")
             return None, 0.0
 
-    def _load_haar_cascade(self):
+    def _load_haar_cascade(self) -> object:
         """Load cascade from cv2.data, local inputs/, or download."""
         # Bundled with opencv-python
         bundled = Path(cv2.data.haarcascades) / _CASCADE_XML
@@ -352,7 +360,7 @@ class FaceDetector:
             console.log(f"[yellow]DNN detection failed ({exc}), using fallback...[/]")
             return None, 0.0
 
-    def _load_dnn_model(self):
+    def _load_dnn_model(self) -> object:
         """Download the Caffe SSD model on first use (~2.7 MB)."""
         _DNN_DIR.mkdir(parents=True, exist_ok=True)
         proto = _DNN_DIR / "deploy.prototxt"
@@ -385,6 +393,7 @@ class FaceDetector:
 
     @staticmethod
     def is_blurry(img_bgr: np.ndarray, threshold: float = 100.0) -> bool:
+        """Determine if an image is blurry based on Laplacian variance."""
         gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
         variance = cv2.Laplacian(gray, cv2.CV_64F).var()
         return variance < threshold

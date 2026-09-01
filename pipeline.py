@@ -94,8 +94,10 @@ def parse_args() -> argparse.Namespace:
         description="HH GOA 2026 | Face Identification & Blockchain Verification Pipeline",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    p.add_argument("--image",        required=True,
+    p.add_argument("--image",
                    help="Path to the input image file")
+    p.add_argument("--auto-demo",    action="store_true",
+                   help="Run the complete pipeline on a sample image without prompts.")
     p.add_argument("--top-n",        type=int, default=5,
                    help="Max OSINT search candidates to evaluate (default: 5)")
     p.add_argument("--rpc",          default=None,
@@ -582,11 +584,90 @@ def _footer(t_start: float, args: argparse.Namespace) -> None:
     tbl.add_row("UTC Timestamp",   datetime.now(tz=timezone.utc).isoformat(timespec="seconds"))
 
     console.print()
-    console.print(Panel(tbl, title="[bold bright_white] [>>] Run Summary",
-                        border_style="bright_white"))
-    console.print()
     console.print(Rule("[bold bright_cyan] HH GOA 2026 -- TASK 3 COMPLETE ", style="bright_cyan"))
     console.print()
+
+
+def compute_final_verdict(face: dict, payload: dict) -> dict:
+    """Compute and print a combined confidence verdict."""
+    face_conf = face.get("confidence", 0.0) * 100
+    search_conf = payload.get("confidence_bps", 0) / 100.0
+    num_engines = payload.get("num_engines_matched", 0)
+    
+    score = (face_conf * 0.4) + (search_conf * 0.4) + ((num_engines / 3.0) * 20.0)
+    
+    domain = payload.get("domain", "").lower()
+    if any(d in domain for d in ["linkedin.com", "twitter.com", "github.com", "wikipedia.org", "x.com"]):
+        score += 10.0
+        
+    if face.get("blur_score", 500) < 100:
+        score -= 5.0
+        
+    score = max(0.0, min(100.0, score))
+    
+    if score >= 80:
+        label = "HIGH"
+        color = "green"
+    elif score >= 50:
+        label = "MEDIUM"
+        color = "yellow"
+    else:
+        label = "LOW"
+        color = "red"
+        
+    tbl = Table(show_header=False, box=box.SIMPLE, padding=(0, 2))
+    tbl.add_column("Metric", style="bold white")
+    tbl.add_column("Value", style="cyan")
+    
+    tbl.add_row("Final Score", f"[{color}]{score:.1f}%[/]")
+    tbl.add_row("Verdict", f"[bold {color}]{label}[/]")
+    
+    console.print(Panel(tbl, title="[bold white] 🎯 Final Verdict", border_style=color))
+    
+    return {"score": round(score, 1), "label": label}
+
+
+def generate_proof_certificate(args: argparse.Namespace, face: dict, payload: dict, tx: dict, verification: dict, final_score: dict) -> None:
+    """Generate a time-stamped text file proof."""
+    proofs_dir = Path("proofs")
+    proofs_dir.mkdir(exist_ok=True)
+    
+    ts = int(datetime.now(timezone.utc).timestamp())
+    filename = proofs_dir / f"proof_{ts}.txt"
+    
+    try:
+        with open(args.image, "rb") as f:
+            orig_hash = hashlib.sha256(f.read()).hexdigest()
+    except Exception:
+        orig_hash = "N/A"
+        
+    try:
+        with open(face.get("cropped_path", ""), "rb") as f:
+            crop_hash = hashlib.sha256(f.read()).hexdigest()
+    except Exception:
+        crop_hash = "N/A"
+        
+    content = f"""HH GOA 2026 - Timestamped Proof Certificate
+===========================================
+Timestamp (UTC): {datetime.fromtimestamp(ts, tz=timezone.utc).isoformat()}
+Verdict: {final_score['label']} ({final_score['score']}%)
+
+[ IMAGE DATA ]
+Original Image Hash: {orig_hash}
+Cropped Face Hash: {crop_hash}
+
+[ OSINT MATCH ]
+Source URL: {payload.get("source_url", "N/A")}
+Domain: {payload.get("domain", "N/A")}
+Search Confidence: {payload.get("confidence_bps", 0) / 100.0}%
+
+[ BLOCKCHAIN RECORD ]
+Transaction Hash: {tx.get("tx_hash", "N/A")}
+Block Number: {tx.get("block_number", "N/A")}
+Verification Status: {"VERIFIED" if verification.get("hash_match") else "UNVERIFIED"}
+"""
+    filename.write_text(content, encoding="utf-8")
+    console.print(f"[green]Proof certificate written to:[/] {filename}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -595,6 +676,15 @@ def _footer(t_start: float, args: argparse.Namespace) -> None:
 
 def main() -> None:
     args    = parse_args()
+    
+    if args.auto_demo:
+        args.image = args.image or "inputs/sample.jpg"
+        args.detector = "retinaface"
+        args.model = "Facenet512"
+        args.top_n = 5
+        
+    if not args.image:
+        _exit_err("Missing Argument", "--image is required unless --auto-demo is used.")
     
     try:
         import tensorflow
@@ -609,6 +699,11 @@ def main() -> None:
     payload, payload_hash = stage2_search(face, args)
     tx, anchor            = stage3_anchor(payload, payload_hash, args)
     verification          = stage4_verify(payload, payload_hash, tx, anchor, args)
+    
+    final_score = compute_final_verdict(face, payload)
+    if verification.get("hash_match"):
+        generate_proof_certificate(args, face, payload, tx, verification, final_score)
+        
     _footer(t_start, args)
 
     if args.json:
@@ -623,8 +718,12 @@ def main() -> None:
             "search": payload_copy,
             "tx": tx,
             "verification": verification,
+            "final_score": final_score,
         }
         print(json.dumps(result, indent=2))
+        sys.exit(0 if verification.get("hash_match") else 2)
+        
+    if args.auto_demo:
         sys.exit(0 if verification.get("hash_match") else 2)
 
 

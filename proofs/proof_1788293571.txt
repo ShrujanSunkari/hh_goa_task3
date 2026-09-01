@@ -1,0 +1,18 @@
+HH GOA 2026 - Timestamped Proof Certificate
+===========================================
+Timestamp (UTC): 2026-09-01T20:12:51+00:00
+Verdict: HIGH (90.9%)
+
+[ IMAGE DATA ]
+Original Image Hash: c4d01fc6ca706d764dba4bc8df73573337491ade5dd720a7333ff18950f6963f
+Cropped Face Hash: c4d01fc6ca706d764dba4bc8df73573337491ade5dd720a7333ff18950f6963f
+
+[ OSINT MATCH ]
+Source URL: https://www.youtube.com/watch?v=5cysPPnZEhM
+Domain: youtube.com
+Search Confidence: 94.0%
+
+[ BLOCKCHAIN RECORD ]
+Transaction Hash: 167bcb70806f198203b5c68f25a4fb9811d9936c36d442c5cb17912982e9380c
+Block Number: 2
+Verification Status: VERIFIED

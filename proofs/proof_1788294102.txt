@@ -1,0 +1,18 @@
+HH GOA 2026 - Timestamped Proof Certificate
+===========================================
+Timestamp (UTC): 2026-09-01T20:21:42+00:00
+Verdict: HIGH (100.0%)
+
+[ IMAGE DATA ]
+Original Image Hash: 9219596f29d765fed01d072342f043fa5f34ccc1fe0b07091b19ac7840a7bd71
+Cropped Face Hash: 9219596f29d765fed01d072342f043fa5f34ccc1fe0b07091b19ac7840a7bd71
+
+[ OSINT MATCH ]
+Source URL: https://in.linkedin.com/in/bhargavsaimadugula
+Domain: in.linkedin.com
+Search Confidence: 100.0%
+
+[ BLOCKCHAIN RECORD ]
+Transaction Hash: 58bfb6de430cce263187603bd5ce0e4ecc6db8b126295651f1488ea884b61634
+Block Number: 2
+Verification Status: VERIFIED

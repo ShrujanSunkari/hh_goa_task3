@@ -273,6 +273,7 @@ class BlockchainAnchor:
     # ─────────────────────────────────────────────────────────────────────────
 
     def _ensure_ready(self) -> None:
+        """Lazy load Web3 and contract instance."""
         if self._w3 is None:
             self._w3 = _build_w3(self._rpc_override)
         if self._contract is None:
@@ -294,7 +295,7 @@ class BlockchainAnchor:
 #  Private: Web3 / contract helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _build_w3(rpc_override: Optional[str]):
+def _build_w3(rpc_override: Optional[str]) -> object:
     """Return a connected Web3 instance."""
     from web3 import Web3
 
@@ -335,7 +336,7 @@ def _build_w3(rpc_override: Optional[str]):
     return w3
 
 
-def _load_contract(w3, artifacts_path: Path):
+def _load_contract(w3: object, artifacts_path: Path) -> object:
     """
     Bind the deployed IdentityRegistry contract.
 
@@ -417,6 +418,7 @@ def _coerce_bytes32(value: Union[bytes, str]) -> bytes:
 def _print_anchor(
     result: Dict, hash_hex: str, source_url: str, confidence_bps: int
 ) -> None:
+    """Print the result of an anchor transaction."""
     tbl = Table(show_header=False, box=None, padding=(0, 2))
     tbl.add_column("Key",   style="bold white", no_wrap=True)
     tbl.add_column("Value", style="cyan")
@@ -435,6 +437,7 @@ def _print_anchor(
 
 
 def _print_verify(result: Dict, hash_hex: str) -> None:
+    """Print the result of a verify call."""
     border = "green" if result["exists"] else "yellow"
     icon   = "✅" if result["exists"] else "❌"
 
