@@ -2,12 +2,11 @@ import os
 import cv2
 import numpy as np
 import pytest
-from unittest.mock import patch
 from modules.face_detector import FaceDetector
 
-@patch("modules.face_detector.DeepFace.represent", create=True)
-def test_face_detector_returns_cropped_path(mock_represent, tmp_path):
+def test_face_detector_returns_cropped_path(mocker, tmp_path):
     # Mock return value just in case DeepFace was used
+    mock_represent = mocker.patch("modules.face_detector.DeepFace.represent", create=True)
     mock_represent.return_value = [{
         "facial_area": {"x": 10, "y": 10, "w": 100, "h": 100},
         "confidence": 0.99,
@@ -23,6 +22,8 @@ def test_face_detector_returns_cropped_path(mock_represent, tmp_path):
     out_path = str(tmp_path / "cropped.jpg")
     result = detector.detect_and_crop(img_path, output_path=out_path)
 
+    assert isinstance(result, dict)
     assert "cropped_path" in result
     assert result["cropped_path"] == out_path
     assert os.path.exists(result["cropped_path"])
+

@@ -22,5 +22,6 @@ tenacity                       # retry decorators
 # ── Testing / Formatting ─────────────────────────────────────────────────────
 pytest                         # testing framework
 pytest-cov                     # test coverage
+pytest-mock                    # mocker fixture
 flake8                         # code linter
 black                          # code formatter
