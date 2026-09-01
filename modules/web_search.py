@@ -176,15 +176,17 @@ class WebSearchEngine:
 
         # ── Upload image & call SerpAPI ───────────────────────────────────────
         raw_matches = []
+        fallback_reason = "No image results found"
         try:
             self._require_key()
             raw_response = self._call_serpapi(img_path)
             raw_matches  = raw_response.get("visual_matches", [])
         except (EnvironmentError, RuntimeError) as e:
+            fallback_reason = str(e)
             console.log(f"[yellow]SerpAPI encountered an error: {e}[/]")
 
         if not raw_matches:
-            console.log("[yellow]No SerpAPI matches (or error), trying Bing fallback...[/]")
+            console.log(f"[yellow]Trying Bing fallback. Reason: {fallback_reason}[/]")
             raw_matches = self._bing_search(img_path)
 
         if not raw_matches:
@@ -313,6 +315,10 @@ class WebSearchEngine:
                 params=params,
                 timeout=30,
             )
+            if resp.status_code != 200:
+                print(f"[ERROR] SerpAPI returned {resp.status_code}: {resp.text[:200]}")
+                return {}
+
         except requests.exceptions.Timeout:
             raise RuntimeError("SerpAPI request timed out after 30 s.")
         except requests.exceptions.ConnectionError as exc:

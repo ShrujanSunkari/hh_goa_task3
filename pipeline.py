@@ -43,8 +43,13 @@ from rich.rule import Rule
 from rich.table import Table
 from rich.text import Text
 
-load_dotenv()
+env_path = Path(__file__).parent / '.env'
+load_dotenv(dotenv_path=env_path)
 
+if not os.getenv("SERPAPI_KEY"):
+    print("[ERROR] SERPAPI_KEY not found in .env. Please set it.")
+else:
+    print(f"[INFO] SERPAPI_KEY loaded (starts with {os.getenv('SERPAPI_KEY')[:4]}...)")
 console = Console(highlight=False)
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -590,6 +595,12 @@ def _footer(t_start: float, args: argparse.Namespace) -> None:
 
 def main() -> None:
     args    = parse_args()
+    
+    try:
+        import tensorflow
+    except ImportError:
+        print("[WARN] TensorFlow not found. Installing tensorflow-cpu is recommended for RetinaFace.")
+
     t_start = time.perf_counter()
 
     _banner()

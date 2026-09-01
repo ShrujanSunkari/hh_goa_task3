@@ -1,6 +1,8 @@
 # ── Core Vision ──────────────────────────────────────────────────────────────
 opencv-python-headless<5       # Haar cascade face detection — OpenCV 5 removed CascadeClassifier
 numpy                          # array ops for histogram embedding
+tensorflow-cpu                 # retinaface backend
+keras                          # tensorflow dependency
 
 # ── Web / OSINT Search ───────────────────────────────────────────────────────
 google-search-results          # SerpAPI client (Google Lens reverse image search)
