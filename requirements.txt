@@ -17,3 +17,10 @@ rich                           # terminal panels, spinners, tables
 # ── Config / Utils ───────────────────────────────────────────────────────────
 python-dotenv                  # .env file loading
 Pillow                         # image utility (optional, used by some cv2 ops)
+tenacity                       # retry decorators
+
+# ── Testing / Formatting ─────────────────────────────────────────────────────
+pytest                         # testing framework
+pytest-cov                     # test coverage
+flake8                         # code linter
+black                          # code formatter

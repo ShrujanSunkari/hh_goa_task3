@@ -25,8 +25,10 @@ Return dict schema
 
 from __future__ import annotations
 
+import hashlib
 import io
 import os
+import sqlite3
 import sys
 import urllib.request
 from pathlib import Path
@@ -123,11 +125,38 @@ class FaceDetector:
         self._cascade: Optional[object]   = None
         self._dnn_net: Optional[object]   = None
 
+        self._init_db()
+
         method = "Haar" if _USE_HAAR else ("DNN SSD" if _USE_DNN else "centre-crop")
         console.log(
             f"[bold cyan]FaceDetector[/] initialised  "
             f"(OpenCV {cv2.__version__} — method=[yellow]{method}[/])"
         )
+
+    def _init_db(self):
+        db_path = _ROOT / "inputs" / "embeddings.db"
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+        self.conn = sqlite3.connect(str(db_path))
+        self.conn.execute(
+            "CREATE TABLE IF NOT EXISTS embeddings (hash TEXT PRIMARY KEY, embedding BLOB)"
+        )
+        self.conn.commit()
+
+    def _get_cached_embedding(self, img_hash: str) -> Optional[List[float]]:
+        cur = self.conn.cursor()
+        cur.execute("SELECT embedding FROM embeddings WHERE hash = ?", (img_hash,))
+        row = cur.fetchone()
+        if row:
+            return np.frombuffer(row[0], dtype=np.float64).tolist()
+        return None
+
+    def _cache_embedding(self, img_hash: str, embedding: List[float]):
+        emb_array = np.array(embedding, dtype=np.float64)
+        self.conn.execute(
+            "INSERT OR REPLACE INTO embeddings (hash, embedding) VALUES (?, ?)",
+            (img_hash, emb_array.tobytes()),
+        )
+        self.conn.commit()
 
     # ─────────────────────────────────────────────────────────────────────────
     #  Public API
@@ -157,6 +186,22 @@ class FaceDetector:
                 f"Cannot open: [bold]{image_path}[/]\n"
                 "Place a JPEG/PNG in [cyan]inputs/[/] and retry.",
             )
+
+        with open(src, "rb") as f:
+            img_bytes = f.read()
+        img_hash = hashlib.sha256(img_bytes).hexdigest()
+
+        cached_emb = self._get_cached_embedding(img_hash)
+        if cached_emb is not None:
+            console.log(f"[green]Retrieved cached embedding for[/] [yellow]{image_path}[/]")
+            region = {"x": 0, "y": 0, "w": 0, "h": 0}
+            _print_result(str(src), region, 1.0, len(cached_emb))
+            return {
+                "cropped_path": str(src),
+                "facial_area": region,
+                "confidence": 1.0,
+                "embedding": cached_emb,
+            }
 
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
         console.log(f"[bold cyan]FaceDetector[/] -> processing [yellow]{image_path}[/]")
@@ -193,11 +238,17 @@ class FaceDetector:
         y2 = min(h_img, y + h + pad_y)
 
         crop = img_bgr[y1:y2, x1:x2]
+        
+        if self.is_blurry(crop):
+            console.log("[yellow]Warning: Cropped face appears blurry![/]")
+            
         cv2.imwrite(output_path, crop)
         crop_path = str(Path(output_path).resolve())
 
         # ── 128-d colour histogram embedding ─────────────────────────────────
         embedding = _histogram_embedding(crop, dims=_EMBEDDING_DIM)
+        
+        self._cache_embedding(img_hash, embedding)
 
         _print_result(crop_path, region, confidence, len(embedding))
         return {
@@ -331,6 +382,12 @@ class FaceDetector:
         fw = w // 2
         fh = h // 2
         return {"x": x, "y": y, "w": fw, "h": fh}, 0.40
+
+    @staticmethod
+    def is_blurry(img_bgr: np.ndarray, threshold: float = 100.0) -> bool:
+        gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+        variance = cv2.Laplacian(gray, cv2.CV_64F).var()
+        return variance < threshold
 
 
 # ─────────────────────────────────────────────────────────────────────────────

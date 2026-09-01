@@ -86,6 +86,8 @@ _JUNK_DOMAINS: List[str] = [
 _SERPAPI_ENDPOINT = "https://serpapi.com/search"
 _DOWNLOAD_TIMEOUT = 10   # seconds
 
+_search_cache: Dict[str, Dict] = {}
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  Internal dataclass (used for scoring and sorting)
@@ -156,8 +158,16 @@ class WebSearchEngine:
         FileNotFoundError if image_path does not exist.
         RuntimeError      if the API returns an error or no matches found.
         """
-        self._require_key()
         img_path = self._validate_image(image_path)
+
+        with open(img_path, "rb") as f:
+            img_bytes = f.read()
+        img_hash = hashlib.sha256(img_bytes).hexdigest()
+
+        global _search_cache
+        if img_hash in _search_cache:
+            console.log("[green]Retrieved search result from in-memory cache.[/]")
+            return _search_cache[img_hash]
 
         console.log(
             f"[bold cyan]WebSearchEngine[/] → Google Lens on "
@@ -165,16 +175,27 @@ class WebSearchEngine:
         )
 
         # ── Upload image & call SerpAPI ───────────────────────────────────────
-        raw_response = self._call_serpapi(img_path)
-        raw_matches  = raw_response.get("visual_matches", [])
+        raw_matches = []
+        try:
+            self._require_key()
+            raw_response = self._call_serpapi(img_path)
+            raw_matches  = raw_response.get("visual_matches", [])
+        except (EnvironmentError, RuntimeError) as e:
+            console.log(f"[yellow]SerpAPI encountered an error: {e}[/]")
+
+        if not raw_matches:
+            console.log("[yellow]No SerpAPI matches (or error), trying Bing fallback...[/]")
+            raw_matches = self._bing_search(img_path)
 
         if not raw_matches:
             _warn(
-                "Google Lens returned no visual matches for this image.\n"
+                "Google Lens and Bing returned no visual matches for this image.\n"
                 "• Ensure the face crop is clear and well-lit.\n"
                 "• The person may not have a public web presence."
             )
-            return _empty_payload()
+            payload = _empty_payload()
+            _search_cache[img_hash] = payload
+            return payload
 
         # ── Sort / prioritise ─────────────────────────────────────────────────
         scored   = _score_matches(raw_matches)
@@ -195,6 +216,7 @@ class WebSearchEngine:
         }
 
         _print_result(payload, scored[:top_n])
+        _search_cache[img_hash] = payload
         return payload
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -362,6 +384,45 @@ class WebSearchEngine:
             "Could not upload the face crop to any public host.\n"
             "Check your internet connection, or use --offline-mock."
         )
+
+    def _bing_search(self, image_path: str) -> List[Dict]:
+        """
+        Fallback search using Bing Visual Search API.
+        Returns a list of dicts with 'title', 'link', 'thumbnail' keys 
+        similar to SerpAPI visual_matches.
+        """
+        bing_key = os.getenv("BING_API_KEY", "")
+        if not bing_key:
+            console.log("[yellow]BING_API_KEY is not set. Skipping Bing fallback.[/]")
+            return []
+
+        endpoint = "https://api.bing.microsoft.com/v7.0/images/visualsearch"
+        headers = {"Ocp-Apim-Subscription-Key": bing_key}
+
+        console.log("[dim]Uploading face crop to Bing Visual Search...[/]")
+        try:
+            with open(image_path, "rb") as fh:
+                file_dict = {"image": ("image.jpg", fh, "image/jpeg")}
+                resp = requests.post(endpoint, headers=headers, files=file_dict, timeout=30)
+            
+            resp.raise_for_status()
+            data = resp.json()
+            
+            raw_matches = []
+            for tag in data.get("tags", []):
+                for action in tag.get("actions", []):
+                    if action.get("actionType") == "PagesIncluding":
+                        for item in action.get("data", {}).get("value", []):
+                            raw_matches.append({
+                                "title": item.get("name", "Untitled"),
+                                "link": item.get("hostPageUrl", ""),
+                                "thumbnail": item.get("thumbnailUrl", "")
+                            })
+            return raw_matches
+
+        except Exception as exc:
+            console.log(f"[yellow]Bing search failed: {exc}[/]")
+            return []
 
 
 

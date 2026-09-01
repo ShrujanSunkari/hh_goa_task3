@@ -38,6 +38,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Optional, Union
 
+from tenacity import retry, stop_after_attempt, wait_random
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
@@ -78,11 +79,13 @@ class BlockchainAnchor:
     #  Public: anchor_record
     # ─────────────────────────────────────────────────────────────────────────
 
+    @retry(stop=stop_after_attempt(3), wait=wait_random(min=2, max=10))
     def anchor_record(
         self,
         data_hash:      Union[bytes, str],
         source_url:     str,
         confidence_bps: int,
+        metadata_uri:   str = "",
     ) -> Dict:
         """
         Call ``registerRecord`` on the deployed contract and return tx metadata.
@@ -126,14 +129,14 @@ class BlockchainAnchor:
             sender  = acct.address
             nonce   = w3.eth.get_transaction_count(sender)
             tx = contract.functions.registerRecord(
-                b32, source_url, confidence_bps
+                b32, source_url, confidence_bps, metadata_uri
             ).build_transaction({**tx_kwargs, "from": sender, "nonce": nonce})
             signed   = w3.eth.account.sign_transaction(tx, private_key)
             tx_hash  = w3.eth.send_raw_transaction(signed.raw_transaction)
         else:
             sender = w3.eth.accounts[0]
             tx_hash = contract.functions.registerRecord(
-                b32, source_url, confidence_bps
+                b32, source_url, confidence_bps, metadata_uri
             ).transact({**tx_kwargs, "from": sender})
 
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
@@ -153,6 +156,70 @@ class BlockchainAnchor:
             )
 
         _print_anchor(result, b32.hex(), source_url, confidence_bps)
+        return result
+
+    # ─────────────────────────────────────────────────────────────────────────
+    #  Public: batch_anchor
+    # ─────────────────────────────────────────────────────────────────────────
+
+    @retry(stop=stop_after_attempt(3), wait=wait_random(min=2, max=10))
+    def batch_anchor(
+        self,
+        data_hashes:         list[Union[bytes, str]],
+        source_urls:         list[str],
+        confidence_bps_list: list[int],
+        metadata_uris:       list[str],
+    ) -> Dict:
+        """
+        Call ``batchRegister`` on the deployed contract and return tx metadata.
+        """
+        b32_list = [_coerce_bytes32(dh) for dh in data_hashes]
+        self._ensure_ready()
+
+        w3       = self._w3
+        contract = self._contract
+        import re as _re
+        _raw = os.getenv("PRIVATE_KEY", "").strip().lstrip("0x")
+        private_key = _raw if _re.fullmatch(r"[0-9a-fA-F]{64}", _raw) else ""
+
+        console.log(f"[bold cyan]BlockchainAnchor[/] → batch anchoring {len(b32_list)} records")
+
+        tx_kwargs: Dict = {
+            "gas":      3_000_000,
+            "gasPrice": w3.eth.gas_price,
+        }
+
+        if private_key:
+            acct    = w3.eth.account.from_key(private_key)
+            sender  = acct.address
+            nonce   = w3.eth.get_transaction_count(sender)
+            tx = contract.functions.batchRegister(
+                b32_list, source_urls, confidence_bps_list, metadata_uris
+            ).build_transaction({**tx_kwargs, "from": sender, "nonce": nonce})
+            signed   = w3.eth.account.sign_transaction(tx, private_key)
+            tx_hash  = w3.eth.send_raw_transaction(signed.raw_transaction)
+        else:
+            sender = w3.eth.accounts[0]
+            tx_hash = contract.functions.batchRegister(
+                b32_list, source_urls, confidence_bps_list, metadata_uris
+            ).transact({**tx_kwargs, "from": sender})
+
+        receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
+
+        result: Dict = {
+            "tx_hash":      tx_hash.hex(),
+            "block_number": receipt["blockNumber"],
+            "gas_used":     receipt["gasUsed"],
+            "status":       receipt["status"],
+        }
+
+        if receipt["status"] == 0:
+            raise RuntimeError(
+                f"Batch transaction reverted.\n"
+                f"tx_hash: {result['tx_hash']}"
+            )
+
+        console.log(f"[green]Batch anchor successful, tx_hash:[/] {result['tx_hash']}")
         return result
 
     # ─────────────────────────────────────────────────────────────────────────

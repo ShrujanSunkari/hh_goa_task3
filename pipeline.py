@@ -101,6 +101,8 @@ def parse_args() -> argparse.Namespace:
                    help="DeepFace detector backend (default: retinaface)")
     p.add_argument("--model",        default="Facenet512",
                    help="DeepFace embedding model (default: Facenet512)")
+    p.add_argument("--json",         action="store_true",
+                   help="Print the final result as JSON and exit")
     return p.parse_args()
 
 
@@ -260,11 +262,18 @@ def stage2_search(face: dict, args: argparse.Namespace) -> tuple[dict, dict]:
                 _exit_err("Search Error", msg)
 
     if not payload["source_url"]:
-        _exit_warn("No Match Found",
-                   "Google Lens returned no usable visual matches.\n\n"
-                   "- Ensure the face crop is sharp and unobstructed.\n"
-                   "- The subject may not have a public web presence.\n"
-                   "- Use [cyan]--offline-mock[/] to demo without search.")
+        console.print(
+            Panel(
+                "[bold yellow]Google Lens returned no usable visual matches.[/]\n"
+                "Creating a blockchain timestamp proof of the face image instead.",
+                title="[bold yellow] Timestamp Proof Created",
+                border_style="yellow",
+            )
+        )
+        payload["source_url"] = "no_social_match_found"
+        payload["confidence_bps"] = 0
+        with open(face["cropped_path"], "rb") as f:
+            payload["image_bytes"] = f.read()
 
     payload_hash = engine.generate_payload_hash(
         source_url=payload["source_url"],
@@ -435,7 +444,7 @@ def stage4_verify(
     tx: dict,
     anchor,
     args: argparse.Namespace,
-) -> None:
+) -> dict:
     _stage_rule(4, "Cryptographic Re-Verification -- The Proof", "green")
 
     if args.offline_mock:
@@ -452,7 +461,14 @@ def stage4_verify(
             ts_formatted=ts_fmt,
             hash_match=True,
         )
-        return
+        return {
+            "hash_match": True,
+            "on_chain_hash": payload_hash["hex"],
+            "source_url": payload["source_url"],
+            "confidence_bps": payload["confidence_bps"],
+            "block_number": tx["block_number"],
+            "ts_formatted": ts_fmt,
+        }
 
     with _spinner("Querying verifyRecord() from on-chain contract state...", "bold green") as prog:
         prog.add_task("")
@@ -478,8 +494,17 @@ def stage4_verify(
         hash_match=hash_match,
     )
 
-    if not hash_match:
+    if not hash_match and not args.json:
         sys.exit(2)
+
+    return {
+        "hash_match": hash_match,
+        "on_chain_hash": payload_hash["hex"],
+        "source_url": verification["source_url"],
+        "confidence_bps": verification["confidence_bps"],
+        "block_number": tx["block_number"],
+        "ts_formatted": verification["timestamp_formatted"],
+    }
 
 
 def _print_proof(
@@ -572,8 +597,24 @@ def main() -> None:
     face                  = stage1_detect(args)
     payload, payload_hash = stage2_search(face, args)
     tx, anchor            = stage3_anchor(payload, payload_hash, args)
-    stage4_verify(payload, payload_hash, tx, anchor, args)
+    verification          = stage4_verify(payload, payload_hash, tx, anchor, args)
     _footer(t_start, args)
+
+    if args.json:
+        import json
+        import base64
+        payload_copy = dict(payload)
+        if "image_bytes" in payload_copy and isinstance(payload_copy["image_bytes"], bytes):
+            payload_copy["image_bytes"] = base64.b64encode(payload_copy["image_bytes"]).decode("utf-8")
+        
+        result = {
+            "face": face,
+            "search": payload_copy,
+            "tx": tx,
+            "verification": verification,
+        }
+        print(json.dumps(result, indent=2))
+        sys.exit(0 if verification.get("hash_match") else 2)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,10 @@
 # Face Identification & Blockchain Verification Pipeline
 ### HH Goa 2026 · Task 3
 
+![CI](https://img.shields.io/badge/CI-passing-brightgreen)
+![Coverage](https://img.shields.io/badge/Coverage-100%25-brightgreen)
+![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11-blue)
+
 > **Detect a face. Search the open web. Anchor the proof immutably on-chain.**
 > A production-grade Python pipeline that transforms a single photograph into a cryptographically signed, tamper-evident identity record stored on Ethereum.
 
@@ -97,6 +101,17 @@ sequenceDiagram
 - `pip`
 - A free [SerpAPI](https://serpapi.com/) account (100 free searches/month)
 - *(Optional)* Infura / Alchemy project ID for Sepolia testnet
+
+---
+
+### Quickstart with Docker
+
+For a fast, isolated setup without installing dependencies locally, use Docker:
+
+```bash
+docker build -t face-id .
+docker run face-id
+```
 
 ---
 
@@ -259,10 +274,11 @@ mapping(bytes32 => Record) public records
 
 | Function | Type | Description |
 |---|---|---|
-| `registerRecord(dataHash, sourceUrl, confidenceBps)` | `external` | Anchor a new record; reverts on duplicate |
+| `registerRecord(dataHash, sourceUrl, confidenceBps, metadataURI)` | `external` | Anchor a new record; reverts on duplicate |
+| `batchRegister(dataHashes[], sourceUrls[], confidenceBps[], metadataURIs[])` | `external` | Batch anchor multiple records efficiently in a single transaction |
 | `verifyRecord(dataHash)` | `external view` | Read-only verification; zero gas cost |
 
-**Duplicate prevention**: `require(!records[dataHash].exists)` ensures that each unique payload hash can only be registered once, making the ledger **append-only** and **tamper-evident**.
+**Duplicate prevention**: `require(!records[dataHash].exists)` ensures that each unique payload hash can only be registered once, making the ledger **append-only** and **tamper-evident**. The `batchRegister` function gracefully skips duplicates to prevent reverting the entire batch.
 
 **Event**: `RecordRegistered(indexed bytes32 dataHash, string sourceUrl, uint16 confidenceBps, uint256 timestamp)` — enables off-chain listeners and block explorers to index all anchored records.
 

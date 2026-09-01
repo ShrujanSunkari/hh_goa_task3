@@ -101,13 +101,14 @@ def compile_contract() -> tuple[list, str]:
     console.log(f"[cyan]Compiling[/] {SOL_FILE} ...")
     source = SOL_FILE.read_text(encoding="utf-8")
 
-    compiled = solcx.compile_source(
-        source,
+    compiled = solcx.compile_files(
+        [SOL_FILE],
         output_values=["abi", "bin"],
         solc_version=SOLC_VERSION,
+        import_remappings=["@openzeppelin=node_modules/@openzeppelin"],
     )
 
-    # The compiled dict key looks like "<stdin>:IdentityRegistry"
+    # The compiled dict key looks like "contracts/IdentityRegistry.sol:IdentityRegistry" or absolute path
     contract_key = next(k for k in compiled if "IdentityRegistry" in k)
     interface = compiled[contract_key]
     abi      = interface["abi"]
@@ -125,19 +126,23 @@ def compile_contract() -> tuple[list, str]:
 #  3. Web3 provider
 # ─────────────────────────────────────────────────────────────────────────────
 
-def build_w3(rpc_override: str | None = None):
+def build_w3(network: str):
     """
     Return a connected Web3 instance.
 
     Priority
     --------
-    1. --rpc CLI argument
-    2. WEB3_PROVIDER_URI env var
-    3. In-process py-evm (EthereumTesterProvider) — zero cost, instant
+    1. --network sepolia -> WEB3_PROVIDER_URI env var
+    2. --network local -> In-process py-evm (EthereumTesterProvider)
     """
     from web3 import Web3
 
-    uri = rpc_override or os.getenv("WEB3_PROVIDER_URI", "evm://")
+    if network == "sepolia":
+        uri = os.getenv("WEB3_PROVIDER_URI")
+        if not uri:
+            raise ValueError("WEB3_PROVIDER_URI is required for sepolia network")
+    else:
+        uri = "evm://"
 
     if uri.startswith("evm://"):
         try:
@@ -257,7 +262,81 @@ def persist_artifact(abi: list, bytecode: str, deploy_result: dict) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  6. CLI summary
+#  6. Etherscan Verification
+# ─────────────────────────────────────────────────────────────────────────────
+
+def verify_etherscan(deploy_result: dict, network: str) -> None:
+    if network != "sepolia":
+        return
+        
+    api_key = os.getenv("ETHERSCAN_API_KEY")
+    if not api_key:
+        console.log("[yellow]ETHERSCAN_API_KEY not set. Skipping Etherscan verification.[/]")
+        return
+        
+    address = deploy_result["deployed_address"]
+    console.log(f"[cyan]Verifying[/] {address} [cyan]on Etherscan API...[/]")
+    
+    # Construct standard JSON including OpenZeppelin files
+    try:
+        oz_ownable = (ROOT / "node_modules" / "@openzeppelin" / "contracts" / "access" / "Ownable.sol").read_text(encoding="utf-8")
+        oz_context = (ROOT / "node_modules" / "@openzeppelin" / "contracts" / "utils" / "Context.sol").read_text(encoding="utf-8")
+    except Exception as e:
+        console.log(f"[yellow]Could not read OpenZeppelin files for verification: {e}[/]")
+        return
+
+    std_json = {
+        "language": "Solidity",
+        "sources": {
+            "contracts/IdentityRegistry.sol": {
+                "content": SOL_FILE.read_text(encoding="utf-8")
+            },
+            "@openzeppelin/contracts/access/Ownable.sol": {
+                "content": oz_ownable
+            },
+            "@openzeppelin/contracts/utils/Context.sol": {
+                "content": oz_context
+            }
+        },
+        "settings": {
+            "optimizer": {
+                "enabled": False,
+                "runs": 200
+            },
+            "outputSelection": {
+                "*": {
+                    "*": ["abi", "evm.bytecode"]
+                }
+            }
+        }
+    }
+    
+    payload = {
+        "apikey": api_key,
+        "module": "contract",
+        "action": "verifysourcecode",
+        "contractaddress": address,
+        "sourceCode": json.dumps(std_json),
+        "codeformat": "solidity-standard-json-input",
+        "contractname": "contracts/IdentityRegistry.sol:IdentityRegistry",
+        "compilerversion": "v0.8.24+commit.e11b9ed9",
+    }
+    
+    import requests
+    try:
+        resp = requests.post("https://api-sepolia.etherscan.io/api", data=payload)
+        resp.raise_for_status()
+        data = resp.json()
+        if data.get("status") == "1":
+            console.log(f"[green]Verification submitted successfully![/] GUID: {data.get('result')}")
+        else:
+            console.log(f"[red]Etherscan verification failed:[/] {data.get('result')}")
+    except Exception as e:
+        console.log(f"[red]Error calling Etherscan API:[/] {e}")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  7. CLI summary
 # ─────────────────────────────────────────────────────────────────────────────
 
 def print_summary(deploy_result: dict) -> None:
@@ -282,17 +361,16 @@ def print_summary(deploy_result: dict) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  Entry-point
+#  8. Entry-point
 # ─────────────────────────────────────────────────────────────────────────────
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Deploy IdentityRegistry.sol")
     p.add_argument(
-        "--rpc",
-        default=None,
-        metavar="URI",
-        help="Web3 RPC endpoint (overrides WEB3_PROVIDER_URI env var). "
-             "Omit to use in-process py-evm.",
+        "--network",
+        choices=["local", "sepolia"],
+        default="local",
+        help="Network to deploy to (local or sepolia).",
     )
     return p.parse_args()
 
@@ -300,13 +378,14 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
 
-    console.rule("[bold blue]Phase 2 -- Contract Deployment")
+    console.rule(f"[bold blue]Phase 2 -- Contract Deployment ({args.network})")
 
     bootstrap_solc()
     abi, bytecode = compile_contract()
-    w3            = build_w3(rpc_override=args.rpc)
+    w3            = build_w3(network=args.network)
     deploy_result = deploy_contract(w3, abi, bytecode)
     persist_artifact(abi, bytecode, deploy_result)
+    verify_etherscan(deploy_result, args.network)
     print_summary(deploy_result)
 
     console.rule("[bold green]Done -- Deployment Complete")
