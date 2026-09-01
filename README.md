@@ -98,7 +98,7 @@ sequenceDiagram
 * **Multi-engine Search**: We query SerpAPI (Google Lens), Bing Visual Search, and Yandex. This dramatically improves recall because each engine indexes different portions of the web and has different regional strengths, ensuring a higher likelihood of identity resolution.
 
 ## Live on Sepolia
-[![Contract on Sepolia](https://img.shields.io/badge/Sepolia-Contract-blue)](https://sepolia.etherscan.io/address/<YOUR_CONTRACT_ADDRESS>)
+[![Contract on Sepolia](https://img.shields.io/badge/Sepolia-Contract-blue)](https://sepolia.etherscan.io/address/0x547C457D9c1d7d52825D4e0D9CD56cFF5D527f58)
 
 ---
 
