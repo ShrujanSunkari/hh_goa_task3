@@ -1,0 +1,19 @@
+# ── Core Vision ──────────────────────────────────────────────────────────────
+opencv-python-headless<5       # Haar cascade face detection — OpenCV 5 removed CascadeClassifier
+numpy                          # array ops for histogram embedding
+
+# ── Web / OSINT Search ───────────────────────────────────────────────────────
+google-search-results          # SerpAPI client (Google Lens reverse image search)
+requests                       # HTTP for thumbnail download
+
+# ── Blockchain ───────────────────────────────────────────────────────────────
+web3                           # Ethereum Web3.py
+eth-tester                     # in-process EVM testing provider
+py-evm                         # zero-cost local EVM for demo
+
+# ── CLI / UX ─────────────────────────────────────────────────────────────────
+rich                           # terminal panels, spinners, tables
+
+# ── Config / Utils ───────────────────────────────────────────────────────────
+python-dotenv                  # .env file loading
+Pillow                         # image utility (optional, used by some cv2 ops)
