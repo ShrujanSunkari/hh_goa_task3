@@ -203,7 +203,7 @@ def deploy_contract(w3: object, abi: list, bytecode: str) -> dict:
     import re as _re
 
     private_key = raw_key if (_re.fullmatch(r"[0-9a-fA-F]{64}", raw_key)) else ""
-    
+
     # Ignore PRIVATE_KEY if running on the local in-process tester (which doesn't fund it)
     if "EthereumTesterProvider" in str(type(w3.provider)):
         private_key = ""

@@ -35,7 +35,7 @@ def setup():
 def test_registrar_role(setup):
     w3, contract, deployer = setup
     REGISTRAR_ROLE = contract.functions.REGISTRAR_ROLE().call()
-    assert contract.functions.hasRole(REGISTRAR_ROLE, deployer).call() == True
+    assert contract.functions.hasRole(REGISTRAR_ROLE, deployer).call() is True
 
 
 def test_non_registrar_cannot_register(setup):
@@ -60,7 +60,7 @@ def test_grant_registrar_role(setup):
 
     # deployer is admin, grants role
     contract.functions.grantRegistrarRole(other_account).transact({"from": deployer})
-    assert contract.functions.hasRole(REGISTRAR_ROLE, other_account).call() == True
+    assert contract.functions.hasRole(REGISTRAR_ROLE, other_account).call() is True
 
     # other_account can now register
     data_hash = b"\x02" * 32
@@ -84,6 +84,6 @@ def test_metadata_uri_stored(setup):
         contract.functions.verifyRecord(data_hash).call()
     )
 
-    assert exists == True
+    assert exists is True
     assert source_url == "https://linkedin.com"
     assert metadata_uri == "ipfs://metadata"
