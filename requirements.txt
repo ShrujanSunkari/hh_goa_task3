@@ -38,7 +38,7 @@ starlette==0.36.3
 h11==0.14.0
 click==8.1.7
 colorama==0.4.6
-eth-abi==4.2.1
+eth-abi==6.0.0
 eth-account==0.11.0
 eth-hash==0.7.0
 eth-keyfile==0.6.1
