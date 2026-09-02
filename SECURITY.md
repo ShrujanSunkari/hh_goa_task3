@@ -25,6 +25,6 @@ This project relies on `tensorflow-cpu==2.15.0` (and its dependencies like `kera
 There are known CVEs associated with TensorFlow 2.15.0 and its pinned dependency versions (e.g., Keras 2.15.0, protobuf 4.25.x). 
 However, **we accept this risk** because:
 1. TensorFlow 2.16+ introduces Keras 3.0 breaking changes that currently break the `deepface` library.
-2. This application runs the face detection pipeline **entirely offline/local-only**. No untrusted remote code execution or adversarial ML model loading is exposed to the public internet.
+2. The vulnerable components (TensorFlow/Keras/protobuf, used only for local ArcFace inference on user-supplied local images) do not process any data received from this project's own network calls (SerpAPI/Bing/Yandex reverse-image search, or the Ethereum RPC connection). The CVEs in question are therefore not reachable through this application's actual attack surface, even though the app does make outbound network calls for OSINT search and blockchain anchoring.
 
 The CI `pip-audit` step is configured to `continue-on-error` to ensure we still see new vulnerabilities reported, without blocking the build on these specific accepted upstream TF 2.15.0 risks.

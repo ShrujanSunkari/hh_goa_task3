@@ -112,7 +112,7 @@ def compile_contract() -> tuple[list, str]:
         solc_version=SOLC_VERSION,
         import_remappings=["@openzeppelin=node_modules/@openzeppelin"],
         optimize=True,
-        optimize_runs=200
+        optimize_runs=200,
     )
 
     # The compiled dict key looks like "contracts/IdentityRegistry.sol:IdentityRegistry" or absolute path

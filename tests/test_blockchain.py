@@ -80,9 +80,15 @@ def test_metadata_uri_stored(setup):
         data_hash, True, "https://linkedin.com", 9900, b"\x00" * 32, "ipfs://metadata"
     ).transact({"from": deployer})
 
-    exists, is_demo_mode, source_url, confidence_bps, payload_commitment, timestamp, metadata_uri = (
-        contract.functions.verifyRecord(data_hash).call()
-    )
+    (
+        exists,
+        is_demo_mode,
+        source_url,
+        confidence_bps,
+        payload_commitment,
+        timestamp,
+        metadata_uri,
+    ) = contract.functions.verifyRecord(data_hash).call()
 
     assert exists is True
     assert source_url == "https://linkedin.com"
