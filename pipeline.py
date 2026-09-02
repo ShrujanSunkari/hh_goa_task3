@@ -405,6 +405,10 @@ def _print_search_result(payload: dict, payload_hash: dict) -> None:
     summary.add_row(
         "Identity Match", f"[bold magenta]{match_score * 100:.1f}%[/] similarity"
     )
+
+    engine_used = payload.get("engine_used", "N/A")
+    summary.add_row("Engine Used", f"[bold yellow]{engine_used}[/]")
+
     summary.add_row("-" * 16, "-" * 40)
     summary.add_row("Payload Hash", f"[bold bright_green]{payload_hash['hex']}[/]")
 

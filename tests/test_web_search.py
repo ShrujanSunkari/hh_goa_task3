@@ -41,39 +41,117 @@ def test_web_search_engine_merge_and_deduplicate():
     assert junk_match.confidence_bps < 5000
 
 
-def test_search_by_image_mocked(mocker, tmp_path):
+def test_serpapi_success(mocker, tmp_path):
     mocker.patch(
-        "modules.web_search.WebSearchEngine._upload_image",
-        return_value="http://dummy.url/img.jpg",
+        "modules.web_search.WebSearchEngine._call_serpapi",
+        return_value={
+            "visual_matches": [
+                {
+                    "title": "Test Title",
+                    "link": "https://x.com/test",
+                    "thumbnail": "http://thumb",
+                }
+            ]
+        },
     )
-
-    mock_response = mocker.MagicMock()
-    mock_response.status_code = 200
-    mock_response.ok = True
-    mock_response.json.return_value = {
-        "visual_matches": [
-            {
-                "title": "Test Title",
-                "link": "https://x.com/test",
-                "thumbnail": "http://thumb",
-            }
-        ]
-    }
-    mocker.patch("requests.get", return_value=mock_response)
+    mocker.patch("modules.web_search.WebSearchEngine._bing_search")
+    mocker.patch("modules.web_search.WebSearchEngine._yandex_search")
 
     engine = WebSearchEngine(api_key="dummy")
 
-    img_path = str(tmp_path / "dummy.jpg")
+    img_path = str(tmp_path / "dummy1.jpg")
     with open(img_path, "wb") as f:
-        f.write(b"dummy")
-
+        f.write(b"dummy1")
     mocker.patch(
         "modules.web_search.WebSearchEngine._enhance_image", return_value=img_path
     )
 
     payload = engine.search_by_image(img_path)
 
-    assert payload["source_url"] == "https://x.com/test"
-    assert payload["domain"] == "x.com"
-    assert payload["confidence_bps"] > 0
-    assert payload["num_engines_matched"] >= 1
+    assert payload["engine_used"] == "serpapi"
+    assert engine._bing_search.call_count == 0
+    assert engine._yandex_search.call_count == 0
+
+
+def test_bing_fallback(mocker, tmp_path):
+    mocker.patch("modules.web_search.WebSearchEngine._call_serpapi", return_value={})
+    mocker.patch(
+        "modules.web_search.WebSearchEngine._bing_search",
+        return_value=[
+            {
+                "title": "Test Title Bing",
+                "link": "https://x.com/bing",
+                "thumbnail": "http://thumb",
+            }
+        ],
+    )
+    mocker.patch("modules.web_search.WebSearchEngine._yandex_search")
+
+    engine = WebSearchEngine(api_key="dummy")
+
+    img_path = str(tmp_path / "dummy2.jpg")
+    with open(img_path, "wb") as f:
+        f.write(b"dummy2")
+    mocker.patch(
+        "modules.web_search.WebSearchEngine._enhance_image", return_value=img_path
+    )
+
+    payload = engine.search_by_image(img_path)
+
+    assert payload["engine_used"] == "bing"
+    assert engine._call_serpapi.call_count == 1
+    assert engine._bing_search.call_count == 1
+    assert engine._yandex_search.call_count == 0
+
+
+def test_yandex_fallback(mocker, tmp_path):
+    mocker.patch("modules.web_search.WebSearchEngine._call_serpapi", return_value={})
+    mocker.patch("modules.web_search.WebSearchEngine._bing_search", return_value=[])
+    mocker.patch(
+        "modules.web_search.WebSearchEngine._yandex_search",
+        return_value=[
+            {
+                "title": "Test Title Yandex",
+                "link": "https://x.com/yandex",
+                "thumbnail": "http://thumb",
+            }
+        ],
+    )
+
+    engine = WebSearchEngine(api_key="dummy")
+
+    img_path = str(tmp_path / "dummy3.jpg")
+    with open(img_path, "wb") as f:
+        f.write(b"dummy3")
+    mocker.patch(
+        "modules.web_search.WebSearchEngine._enhance_image", return_value=img_path
+    )
+
+    payload = engine.search_by_image(img_path)
+
+    assert payload["engine_used"] == "yandex"
+    assert engine._call_serpapi.call_count == 1
+    assert engine._bing_search.call_count == 1
+    assert engine._yandex_search.call_count == 1
+
+
+def test_all_fail(mocker, tmp_path):
+    mocker.patch("modules.web_search.WebSearchEngine._call_serpapi", return_value={})
+    mocker.patch("modules.web_search.WebSearchEngine._bing_search", return_value=[])
+    mocker.patch("modules.web_search.WebSearchEngine._yandex_search", return_value=[])
+
+    engine = WebSearchEngine(api_key="dummy")
+
+    img_path = str(tmp_path / "dummy4.jpg")
+    with open(img_path, "wb") as f:
+        f.write(b"dummy4")
+    mocker.patch(
+        "modules.web_search.WebSearchEngine._enhance_image", return_value=img_path
+    )
+
+    payload = engine.search_by_image(img_path)
+
+    assert payload["engine_used"] == ""
+    assert engine._call_serpapi.call_count == 1
+    assert engine._bing_search.call_count == 1
+    assert engine._yandex_search.call_count == 1

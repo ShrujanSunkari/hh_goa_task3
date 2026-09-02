@@ -173,33 +173,43 @@ class WebSearchEngine:
             f"[bold cyan]WebSearchEngine[/] → Searching on " f"[yellow]{image_path}[/]"
         )
 
-        def _run_searches(search_img: str) -> tuple[List[_Match], int]:
+        def _run_searches(search_img: str) -> tuple[List[_Match], str]:
             # 1. SerpAPI (Google Lens)
-            raw_serp = []
             try:
                 self._require_key()
                 raw_response = self._call_serpapi(search_img)
                 raw_serp = raw_response.get("visual_matches", [])
+                if raw_serp:
+                    console.log(
+                        "[green]SerpAPI returned matches. Skipping fallbacks.[/]"
+                    )
+                    return _merge_and_deduplicate([raw_serp]), "serpapi"
             except (EnvironmentError, RuntimeError) as e:
                 console.log(f"[yellow]SerpAPI encountered an error: {e}[/]")
 
-            # 2. Bing
+            # 2. Bing Fallback
+            console.log(
+                "[yellow]SerpAPI returned no results or failed. Falling back to Bing...[/]"
+            )
             raw_bing = self._bing_search(search_img)
+            if raw_bing:
+                console.log("[green]Bing returned matches. Skipping Yandex.[/]")
+                return _merge_and_deduplicate([raw_bing]), "bing"
 
-            # 3. Yandex
+            # 3. Yandex Fallback
+            console.log(
+                "[yellow]Bing returned no results or failed. Falling back to Yandex...[/]"
+            )
             raw_yandex = self._yandex_search(search_img)
+            if raw_yandex:
+                console.log("[green]Yandex returned matches.[/]")
+                return _merge_and_deduplicate([raw_yandex]), "yandex"
 
-            engines_matched = sum(
-                1 for eng_res in (raw_serp, raw_bing, raw_yandex) if eng_res
-            )
-            return (
-                _merge_and_deduplicate([raw_serp, raw_bing, raw_yandex]),
-                engines_matched,
-            )
+            return [], ""
 
         # Enhance the crop first
         enhanced_img = self._enhance_image(img_path)
-        scored, num_engines = _run_searches(enhanced_img)
+        scored, engine_used = _run_searches(enhanced_img)
 
         # Fallback to full image if no matches
         if not scored and original_image_path:
@@ -208,7 +218,7 @@ class WebSearchEngine:
             )
             orig_img_path = self._validate_image(original_image_path)
             enhanced_orig = self._enhance_image(orig_img_path)
-            scored, num_engines = _run_searches(enhanced_orig)
+            scored, engine_used = _run_searches(enhanced_orig)
 
         if not scored:
             _warn(
@@ -243,7 +253,7 @@ class WebSearchEngine:
             "thumbnail_url": best.thumbnail_url,
             "image_bytes": image_bytes,
             "confidence_bps": best.confidence_bps,
-            "num_engines_matched": num_engines,
+            "engine_used": engine_used,
             "raw_matches": raw_matches,
         }
 
@@ -446,12 +456,21 @@ class WebSearchEngine:
         headers = {"Ocp-Apim-Subscription-Key": bing_key}
 
         console.log("[dim]Uploading face crop to Bing Visual Search...[/]")
-        try:
+        from tenacity import retry, stop_after_attempt, wait_exponential
+
+        @retry(
+            stop=stop_after_attempt(3),
+            wait=wait_exponential(multiplier=1, min=2, max=10),
+        )
+        def _post_with_retry():
             with open(image_path, "rb") as fh:
                 file_dict = {"image": ("image.jpg", fh, "image/jpeg")}
-                resp = requests.post(
+                return requests.post(
                     endpoint, headers=headers, files=file_dict, timeout=30
                 )
+
+        try:
+            resp = _post_with_retry()
 
             resp.raise_for_status()
             data = resp.json()
@@ -481,10 +500,19 @@ class WebSearchEngine:
         endpoint = "https://yandex.com/images/search?rpt=imageview"
 
         console.log("[dim]Uploading face crop to Yandex Image Search...[/]")
-        try:
+        from tenacity import retry, stop_after_attempt, wait_exponential
+
+        @retry(
+            stop=stop_after_attempt(3),
+            wait=wait_exponential(multiplier=1, min=2, max=10),
+        )
+        def _post_with_retry():
             with open(image_path, "rb") as fh:
                 files = {"upfile": ("image.jpg", fh, "image/jpeg")}
-                resp = requests.post(endpoint, files=files, timeout=30)
+                return requests.post(endpoint, files=files, timeout=30)
+
+        try:
+            resp = _post_with_retry()
 
             resp.raise_for_status()
 
@@ -690,6 +718,7 @@ def _empty_payload() -> Dict:
         "thumbnail_url": "",
         "image_bytes": b"",
         "confidence_bps": 0,
+        "engine_used": "",
         "raw_matches": [],
     }
 
@@ -729,6 +758,7 @@ def _print_result(payload: Dict, top_matches: List[_Match]) -> None:
             f"[bold]Domain:[/]        [cyan]{payload['domain']}[/]\n"
             f"[bold]Confidence:[/]    [magenta]{payload['confidence_bps']} bps "
             f"({payload['confidence_bps']/100:.1f}%)[/]\n"
+            f"[bold]Engine:[/]        [yellow]{payload.get('engine_used', 'N/A')}[/]\n"
             f"[bold]Source URL:[/]    {payload['source_url']}\n"
             f"[bold]Thumbnail:[/]     {payload['thumbnail_url']}\n"
             f"[bold]Image bytes:[/]   {len(payload['image_bytes']):,} bytes",
