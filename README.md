@@ -4,6 +4,7 @@
 ![CI](https://img.shields.io/badge/CI-passing-brightgreen)
 ![Coverage](https://img.shields.io/badge/Coverage-100%25-brightgreen)
 ![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11-blue)
+[![Contract on Sepolia](https://img.shields.io/badge/Sepolia-Contract-blue)](https://sepolia.etherscan.io/address/0x1FA03Ad458DFE2e609F6ae8cf91f5440A0E481E0)
 
 > **Detect a face. Search the open web. Anchor the proof immutably on-chain.**
 > A production-grade Python pipeline that transforms a single photograph into a cryptographically signed, tamper-evident identity record stored on Ethereum.
@@ -84,7 +85,7 @@ sequenceDiagram
 | **Fallback Detector** | OpenCV Haar Cascade | `4.9.0.80` | Air-gapped / offline fallback |
 | **OSINT Search** | SerpAPI Google Lens | API v1 | Reverse image search, social-domain identification |
 | **Hashing** | Python `hashlib` SHA-256 | stdlib | Off-chain payload fingerprinting |
-| **Smart Contract** | Solidity | `0.8.24` | Immutable on-chain identity registry |
+| **Smart Contract** | Solidity / OpenZeppelin | `0.8.24` | Immutable on-chain identity registry with AccessControl |
 | **Web3 Client** | Web3.py | `6.20.1` | Transaction signing, contract interaction |
 | **Local EVM** | py-evm + eth-tester | `0.10.0b4` | Zero-cost in-process demo blockchain |
 | **Testnet** | Sepolia (Ethereum) | — | Public tamper-evident ledger |
@@ -274,6 +275,8 @@ Instead, we compute a **SHA-256 fingerprint** of the detection payload off-chain
 - **Integrity**: any change to the source URL or thumbnail invalidates the hash.
 - **Non-repudiation**: the block timestamp proves *when* the identification was made.
 - **Gas efficiency**: a single `SSTORE` of 32 bytes costs ~20,000 gas (~$0.004 on Sepolia).
+
+Role-based access control (Registrar Role) allows multiple trusted parties to anchor records, and the metadataURI field supports off-chain storage links (IPFS/Arweave).
 
 ### Smart Contract: `IdentityRegistry.sol`
 

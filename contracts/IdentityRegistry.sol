@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 
 /**
  * @title  IdentityRegistry
@@ -14,9 +14,22 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  *  Confidence is stored in basis-points (0 – 10 000) so uint16 suffices
  *  and no floating-point conversions are needed on-chain.
  */
-contract IdentityRegistry is Ownable {
+contract IdentityRegistry is AccessControl {
 
-    constructor() Ownable(msg.sender) {}
+    bytes32 public constant REGISTRAR_ROLE = keccak256("REGISTRAR_ROLE");
+
+    constructor() {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(REGISTRAR_ROLE, msg.sender);
+    }
+
+    /**
+     * @notice Grants the REGISTRAR_ROLE to a new account.
+     * @param account The address to receive the role.
+     */
+    function grantRegistrarRole(address account) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        grantRole(REGISTRAR_ROLE, account);
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
     //  Types
@@ -77,7 +90,7 @@ contract IdentityRegistry is Ownable {
         string calldata sourceUrl,
         uint16         confidenceBps,
         string calldata metadataURI
-    ) external onlyOwner {
+    ) external onlyRole(REGISTRAR_ROLE) {
         require(dataHash != bytes32(0),            "IdentityRegistry: zero dataHash");
         require(!records[dataHash].exists,          "IdentityRegistry: duplicate record");
         require(confidenceBps <= 10_000,            "IdentityRegistry: confidenceBps > 100%");
@@ -104,7 +117,7 @@ contract IdentityRegistry is Ownable {
         string[] calldata sourceUrls,
         uint16[] calldata confidenceBpsArray,
         string[] calldata metadataURIs
-    ) external onlyOwner {
+    ) external onlyRole(REGISTRAR_ROLE) {
         require(
             dataHashes.length == sourceUrls.length &&
             dataHashes.length == confidenceBpsArray.length &&
