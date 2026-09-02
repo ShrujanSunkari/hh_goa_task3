@@ -4,7 +4,7 @@
 ![CI](https://img.shields.io/badge/CI-passing-brightgreen)
 <!-- Coverage badge coming soon -->
 ![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11-blue)
-[![Contract on Sepolia](https://img.shields.io/badge/Sepolia-Contract-blue)](https://sepolia.etherscan.io/address/0x547c457d9c1d7d52825d4e0d9cd56cff5d527f58)
+[![Contract on Sepolia](https://img.shields.io/badge/Sepolia-Verified_Contract-success)](https://sepolia.etherscan.io/address/0x36D16b3185aED3645AC7cf7584d2e10891f9DA77)
 
 > **Detect a face. Search the open web. Anchor the proof immutably on-chain.**
 > A production-grade Python pipeline that transforms a single photograph into a cryptographically signed, tamper-evident identity record stored on Ethereum.
@@ -97,7 +97,7 @@ sequenceDiagram
 * **Multi-engine Search**: We query SerpAPI (Google Lens), Bing Visual Search, and Yandex. This dramatically improves recall because each engine indexes different portions of the web and has different regional strengths, ensuring a higher likelihood of identity resolution.
 
 ## Live on Sepolia
-[![Contract on Sepolia](https://img.shields.io/badge/Sepolia-Contract-blue)](https://sepolia.etherscan.io/address/0x547c457d9c1d7d52825d4e0d9cd56cff5d527f58)
+[![Contract on Sepolia](https://img.shields.io/badge/Sepolia-Verified_Contract-success)](https://sepolia.etherscan.io/address/0x36D16b3185aED3645AC7cf7584d2e10891f9DA77)
 
 ---
 
@@ -109,6 +109,8 @@ sequenceDiagram
 - `pip`
 - A free [SerpAPI](https://serpapi.com/) account (100 free searches/month)
 - *(Optional)* Infura / Alchemy project ID for Sepolia testnet
+
+> **Note:** For best face detection, install TensorFlow to enable RetinaFace.
 
 ---
 
@@ -320,6 +322,7 @@ The hash is **deterministic** — given the same URL, image, and metadata, any p
 | Limitation | Impact | Mitigation |
 |---|---|---|
 | **SerpAPI rate limit** | 100 free searches/month; shared-key exhaustion | Use `--offline-mock` for demos; upgrade plan for production |
+| **Search engine API rate limits** | Outages or rate limits cause pipeline failure | The pipeline falls back to Bing/Yandex and implements retries with exponential backoff |
 | **Face recognition accuracy** | Identical twins, heavy makeup, low-res images reduce accuracy | Require minimum crop resolution |
 | **OSINT coverage** | Subjects without a public web presence return no matches | Expand to PimEyes or dedicated face-search APIs |
 | **On-chain privacy** | `sourceUrl` and `confidenceBps` are publicly readable on testnet/mainnet | Encrypt fields or move to a permissioned chain |

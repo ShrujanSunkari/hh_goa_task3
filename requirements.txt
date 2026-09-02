@@ -1,5 +1,6 @@
 # ── Core Vision ──────────────────────────────────────────────────────────────
 opencv-python-headless<5       # Haar cascade face detection — OpenCV 5 removed CascadeClassifier
+tensorflow-cpu                 # optional: enables RetinaFace model for better face detection
 numpy                          # array ops for histogram embedding
 fastapi>=0.110.0
 uvicorn>=0.27.0

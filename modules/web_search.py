@@ -332,39 +332,34 @@ class WebSearchEngine:
             "url":     public_url,
             "hl":      "en",
         }
+        from tenacity import retry, stop_after_attempt, wait_exponential
+        
+        @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+        def _get_with_retry():
+            return requests.get(_SERPAPI_ENDPOINT, params=params, timeout=30)
+            
         try:
-            resp = requests.get(
-                _SERPAPI_ENDPOINT,
-                params=params,
-                timeout=30,
-            )
-            if resp.status_code != 200:
-                print(f"[ERROR] SerpAPI returned {resp.status_code}: {resp.text[:200]}")
+            resp = _get_with_retry()
+            
+            if resp.status_code == 429:
+                console.log("[yellow]SerpAPI rate limit exceeded. Falling back to other engines...[/]")
                 return {}
-
-        except requests.exceptions.Timeout:
-            raise RuntimeError("SerpAPI request timed out after 30 s.")
-        except requests.exceptions.ConnectionError as exc:
-            raise RuntimeError(f"Network error reaching SerpAPI: {exc}")
-
-        if resp.status_code == 429:
-            raise RuntimeError(
-                "SerpAPI rate limit exceeded.  Wait a moment and retry."
-            )
-        if resp.status_code in (401, 403):
-            raise RuntimeError(
-                f"SerpAPI rejected the key (HTTP {resp.status_code}). "
-                "Verify SERPAPI_KEY at https://serpapi.com/manage-api-key"
-            )
-        if not resp.ok:
-            raise RuntimeError(
-                f"SerpAPI returned HTTP {resp.status_code}: {resp.text[:300]}"
-            )
-
-        data = resp.json()
-        if "error" in data:
-            raise RuntimeError(f"SerpAPI error: {data['error']}")
-        return data
+            if resp.status_code in (401, 403):
+                console.log(f"[yellow]SerpAPI key rejected (HTTP {resp.status_code}). Falling back...[/]")
+                return {}
+            if not resp.ok:
+                console.log(f"[yellow]SerpAPI returned HTTP {resp.status_code}. Falling back...[/]")
+                return {}
+                
+            data = resp.json()
+            if "error" in data:
+                console.log(f"[yellow]SerpAPI error: {data['error']}. Falling back...[/]")
+                return {}
+            return data
+            
+        except Exception as exc:
+            console.log(f"[yellow]SerpAPI request failed after retries: {exc}. Falling back to other engines...[/]")
+            return {}
 
     @staticmethod
     def _upload_image(image_path: str) -> str:
