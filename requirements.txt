@@ -1,7 +1,7 @@
 # ── Core Vision ──────────────────────────────────────────────────────────────
 opencv-python-headless==4.9.0.80
 tensorflow-cpu==2.15.0
-deepface==0.0.84
+deepface==0.0.93
 numpy==1.26.4
 fastapi==0.110.0
 uvicorn==0.27.1

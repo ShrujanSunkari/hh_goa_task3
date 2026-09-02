@@ -131,7 +131,10 @@ def parse_args() -> argparse.Namespace:
         help="Simulate all external calls (no API keys or network required)",
     )
     p.add_argument(
-        "--detector", default="opencv", help="OpenCV detector backend (default: opencv)"
+        "--detector",
+        choices=["retinaface", "opencv"],
+        default="retinaface",
+        help="Detector backend: 'retinaface' (default) or 'opencv' (fallback)",
     )
     p.add_argument(
         "--json", action="store_true", help="Print the final result as JSON and exit"

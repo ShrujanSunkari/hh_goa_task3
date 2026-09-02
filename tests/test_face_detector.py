@@ -47,7 +47,9 @@ def test_face_detector_returns_cropped_path(mocker, tmp_path):
     assert os.path.exists(result["cropped_path"])
     assert "confidence" in result
     assert "embedding" in result
+    assert "histogram_embedding" in result
     assert len(result["embedding"]) == 128
+    assert result["backend_used"] == "opencv_fallback"
 
 
 def test_compare_faces(mocker, tmp_path):
@@ -82,9 +84,18 @@ def test_deepface_primary_embedding(mocker, tmp_path):
 
     if not hasattr(modules.face_detector, "DeepFace"):
         modules.face_detector.DeepFace = type(
-            "DeepFace", (), {"represent": lambda: None, "verify": lambda: None}
+            "DeepFace",
+            (),
+            {
+                "represent": lambda: None,
+                "verify": lambda: None,
+                "build_model": lambda x: None,
+                "extract_faces": lambda *args, **kwargs: None,
+            },
         )
 
+    mock_build = mocker.patch.object(modules.face_detector.DeepFace, "build_model")
+    mock_extract = mocker.patch.object(modules.face_detector.DeepFace, "extract_faces")
     mock_represent = mocker.patch.object(modules.face_detector.DeepFace, "represent")
     # DeepFace.represent returns a list of objects
     mock_represent.return_value = [
@@ -113,7 +124,11 @@ def test_deepface_primary_embedding(mocker, tmp_path):
     result = detector.detect_and_crop(img_path, output_path=out_path)
 
     assert result["embedding_method"] == "arcface"
+    assert result["backend_used"] == "retinaface"
     assert len(result["embedding"]) == 512
+    assert len(result["histogram_embedding"]) == 128
+    mock_build.assert_called_with("ArcFace")
+    mock_extract.assert_called()
     mock_represent.assert_called_once()
 
 
@@ -129,14 +144,21 @@ def test_deepface_fallback_on_failure(mocker, tmp_path):
 
     if not hasattr(modules.face_detector, "DeepFace"):
         modules.face_detector.DeepFace = type(
-            "DeepFace", (), {"represent": lambda: None, "verify": lambda: None}
+            "DeepFace",
+            (),
+            {
+                "represent": lambda: None,
+                "verify": lambda: None,
+                "build_model": lambda x: None,
+                "extract_faces": lambda *args, **kwargs: None,
+            },
         )
 
-    # Mock deepface to raise an exception
-    mock_represent = mocker.patch.object(
+    # Mock deepface build_model to raise an exception, triggering eager fallback
+    mock_build = mocker.patch.object(
         modules.face_detector.DeepFace,
-        "represent",
-        side_effect=ValueError("No face found"),
+        "build_model",
+        side_effect=ValueError("Tensorflow not found"),
     )
 
     # Mock Haar so fallback succeeds
@@ -160,5 +182,7 @@ def test_deepface_fallback_on_failure(mocker, tmp_path):
     result = detector.detect_and_crop(img_path, output_path=out_path)
 
     assert result["embedding_method"] == "opencv_histogram_fallback"
+    assert result["backend_used"] == "opencv_fallback"
     assert len(result["embedding"]) == 128
-    mock_represent.assert_called_once()
+    assert len(result["histogram_embedding"]) == 128
+    mock_build.assert_called_once_with("ArcFace")

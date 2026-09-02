@@ -123,7 +123,7 @@ class FaceDetector:
         min_neighbors: int = 5,
         min_size: tuple = (60, 60),
         cascade_path: Optional[str] = None,
-        detector_backend: str = "opencv",
+        detector_backend: str = "retinaface",
         model_name: str = "histogram",
         enforce_gpu: bool = False,
         offline_fallback: bool = False,
@@ -135,12 +135,37 @@ class FaceDetector:
         self._cascade: Optional[object] = None
         self._dnn_net: Optional[object] = None
         self.offline_fallback = offline_fallback
+        self.backend = detector_backend.lower()
 
         self._init_db()
 
+        self._deepface_ready = False
+        if _HAS_DEEPFACE and self.backend == "retinaface" and not self.offline_fallback:
+            try:
+                # Eagerly build ArcFace and RetinaFace to fail fast (e.g. if TF is missing)
+                DeepFace.build_model("ArcFace")
+                try:
+                    dummy = np.zeros((100, 100, 3), dtype=np.uint8)
+                    DeepFace.extract_faces(
+                        dummy, detector_backend="retinaface", enforce_detection=False
+                    )
+                except Exception:
+                    pass
+                self._deepface_ready = True
+            except Exception as exc:
+                console.log(
+                    f"[yellow]Failed to initialize DeepFace/RetinaFace: {exc}. Falling back to OpenCV.[/]"
+                )
+                self.backend = "opencv"
+        elif self.backend == "retinaface":
+            console.log(
+                "[yellow]DeepFace not installed or offline fallback enabled. Falling back to OpenCV.[/]"
+            )
+            self.backend = "opencv"
+
         method = "Haar" if _USE_HAAR else ("DNN SSD" if _USE_DNN else "centre-crop")
-        if _HAS_DEEPFACE and not self.offline_fallback:
-            method = "DeepFace (ArcFace)"
+        if self._deepface_ready:
+            method = "DeepFace (ArcFace / RetinaFace)"
         elif self.offline_fallback:
             method += " [OFFLINE FALLBACK]"
 
@@ -226,7 +251,11 @@ class FaceDetector:
                 "confidence": 1.0,
                 "blur_score": 500.0,
                 "embedding": cached_emb,
+                "histogram_embedding": cached_emb if len(cached_emb) == 128 else None,
                 "embedding_method": method,
+                "backend_used": (
+                    "retinaface" if method == "arcface" else "opencv_fallback"
+                ),
             }
 
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
@@ -242,7 +271,7 @@ class FaceDetector:
 
         h_img, w_img = img_bgr.shape[:2]
 
-        if _HAS_DEEPFACE and not self.offline_fallback:
+        if self._deepface_ready:
             try:
                 objs = DeepFace.represent(
                     img_path=str(src),
@@ -278,18 +307,25 @@ class FaceDetector:
                     self._cache_embedding(img_hash, emb)
                     _print_result(crop_path, region, confidence, len(emb), "arcface")
 
+                    histogram_embedding = _histogram_embedding(
+                        crop, dims=_EMBEDDING_DIM
+                    )
+
                     return {
                         "cropped_path": crop_path,
                         "facial_area": region,
                         "confidence": round(confidence, 4),
                         "blur_score": blur_score,
                         "embedding": emb,
+                        "histogram_embedding": histogram_embedding,
                         "embedding_method": "arcface",
+                        "backend_used": "retinaface",
                     }
             except Exception as exc:
                 console.log(
                     f"[yellow]DeepFace failed ({exc}), falling back to OpenCV...[/]"
                 )
+                self._deepface_ready = False
 
         console.log(
             "[bold yellow][FALLBACK] Using OpenCV color-histogram similarity — NOT a biometric embedding. Enable TensorFlow for DeepFace/ArcFace matching.[/]"
@@ -345,7 +381,9 @@ class FaceDetector:
             "confidence": round(confidence, 4),
             "blur_score": blur_score,
             "embedding": embedding,
+            "histogram_embedding": embedding,
             "embedding_method": "opencv_histogram_fallback",
+            "backend_used": "opencv_fallback",
         }
 
     def compare_faces(self, face1_path: str, face2_path: str) -> float:
