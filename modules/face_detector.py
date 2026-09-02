@@ -45,8 +45,10 @@ try:
     from deepface import DeepFace
 
     _HAS_DEEPFACE = True
-except ImportError:
+    _DEEPFACE_UNAVAILABLE_REASON = None
+except ImportError as _deepface_import_err:
     _HAS_DEEPFACE = False
+    _DEEPFACE_UNAVAILABLE_REASON = str(_deepface_import_err)
 
 console = Console(highlight=False)
 
@@ -158,8 +160,10 @@ class FaceDetector:
                 )
                 self.backend = "opencv"
         elif self.backend == "retinaface":
+            reason = _DEEPFACE_UNAVAILABLE_REASON or "offline_fallback=True"
             console.log(
-                "[yellow]DeepFace not installed or offline fallback enabled. Falling back to OpenCV.[/]"
+                f"[yellow]DeepFace unavailable on this Python version — falling back to OpenCV Haar Cascade. "
+                f"Reason: {reason}[/]"
             )
             self.backend = "opencv"
 

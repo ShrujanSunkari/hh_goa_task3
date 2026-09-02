@@ -1,20 +1,19 @@
 # Face Identification & Blockchain Verification Pipeline
 ### HH Goa 2026 · Task 3
 
-![CI](https://img.shields.io/badge/CI-passing-brightgreen)
-<!-- Coverage badge coming soon -->
-![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11-blue)
-[![Contract on Sepolia](https://img.shields.io/badge/Sepolia-Verified_Contract-success)](https://sepolia.etherscan.io/address/0x36D16b3185aED3645AC7cf7584d2e10891f9DA77)
+![CI](https://github.com/ShrujanSunkari/hh_goa_task3/actions/workflows/ci.yml/badge.svg)
+![Python](https://img.shields.io/badge/Python-3.10-blue)
+[![Contract on Sepolia](https://img.shields.io/badge/Sepolia-Live_Contract-success)](https://sepolia.etherscan.io/address/0xCc67296BFc4d09DE7E930d9f7C2BFE10b6fBfB94)
 
 > **Detect a face. Search the open web. Anchor the proof immutably on-chain.**
-> A Python pipeline featuring 100% CI pass rates, `pytest` unit test coverage across 3 core modules, and automated `flake8`/`black` linting.
+> A Python pipeline featuring `pytest` unit test coverage across 3 core modules, and automated `flake8`/`black` linting enforced in CI.
 
 ---
 
 ## Verified Claims
 
 This repository fulfils all hackathon requirements, and the logic is fully testable and verifiable:
-- [x] **Face ID**: Generates real biometric embeddings using `DeepFace/ArcFace` (`modules/face_detector.py:FaceDetector`).
+- [x] **Face Detection**: Detects and crops the primary face using **OpenCV Haar Cascade** (always available, no TF required). When running on **Python 3.10** with `tensorflow-cpu` installed, **DeepFace/ArcFace** delivers 512-d biometric embeddings instead — confirmed via `FaceDetector initialised (method=DeepFace (ArcFace / RetinaFace))` in the log.
 - [x] **Genuine Web Search**: Conducts live reverse image searches via SerpAPI Google Lens without hardcoded results (`modules/web_search.py` and `tests/test_web_search.py`).
 - [x] **Blockchain Anchoring & Re-verification**: Implements secure on-chain proof registration on the Sepolia testnet and provides a view-call re-verification mechanism (`modules/blockchain.py`).
 - [x] **No Hardcoded Results**: The system processes arbitrary images and resolves identities dynamically with robust fallback strategies.
@@ -43,7 +42,7 @@ This pipeline solves a hard real-world problem in three automated stages:
 
 | Stage | Module | What happens |
 |---|---|---|
-| **1 · Face Extraction** | `modules/face_detector.py` | DeepFace/ArcFace detects the primary face and extracts a 512-d biometric embedding (with an OpenCV fallback for air-gapped execution). |
+| **1 · Face Extraction** | `modules/face_detector.py` | OpenCV Haar Cascade detects the primary face (always available). DeepFace/ArcFace biometric embedding (512-d) is used when TensorFlow is installed on Python 3.10. |
 | **2 · OSINT Identification** | `modules/web_search.py` | The cropped face is submitted to SerpAPI Google Lens; top results are ranked by social-domain priority; the matched page URL and thumbnail are captured. |
 | **3 · Blockchain Anchoring** | `modules/blockchain.py` | A SHA-256 fingerprint of `(source_url ‖ thumbnail_bytes ‖ metadata)` is submitted to a Solidity smart contract on Ethereum; the record is immutable and publicly verifiable. |
 
@@ -56,7 +55,7 @@ sequenceDiagram
     autonumber
     actor User
     participant CLI   as pipeline.py
-    participant FD    as FaceDetector<br/>(DeepFace/ArcFace + OpenCV fallback)
+    participant FD    as FaceDetector<br/>(OpenCV Haar / DeepFace+ArcFace on Py3.10)
     participant SE    as WebSearchEngine<br/>(SerpAPI Google Lens)
     participant Hash  as SHA-256 Hasher
     participant W3    as Web3.py
@@ -64,7 +63,7 @@ sequenceDiagram
 
     User  ->> CLI   : python pipeline.py --image photo.jpg
     CLI   ->> FD    : detect_and_crop(photo.jpg)
-    FD    -->> CLI  : {cropped_path, facial_area, confidence, embedding[512]}
+    FD    -->> CLI  : {cropped_path, facial_area, confidence, embedding}
 
     CLI   ->> SE    : search_by_image(cropped_path)
     SE    ->> SE    : POST image → SerpAPI Google Lens
@@ -74,13 +73,13 @@ sequenceDiagram
     Hash  -->> CLI  : payload_hash (bytes32)
 
     CLI   ->> W3    : anchor_record(payload_hash, source_url, confidence_bps)
-    W3    ->> Chain : registerRecord(dataHash, sourceUrl, confidenceBps)
-    Chain -->> W3   : emit RecordRegistered(dataHash, ...)
+    W3    ->> Chain : registerRecord(dataHash, isDemoMode, sourceUrl, confidenceBps, payloadCommitment, metadataURI)
+    Chain -->> W3   : emit RecordRegistered(dataHash, isDemoMode, timestamp)
     W3    -->> CLI  : {tx_hash, block_number, gas_used}
 
     CLI   ->> W3    : verify_record(payload_hash)
     W3    ->> Chain : verifyRecord(dataHash) [view call]
-    Chain -->> W3   : (exists=true, sourceUrl, confidenceBps, timestamp)
+    Chain -->> W3   : (exists, isDemoMode, sourceUrl, confidenceBps, payloadCommitment, timestamp, metadataUri)
     W3    -->> CLI  : Verification result
 
     CLI   -->> User : [PROOF] On-Chain Hash == Local Hash — VERIFIED
@@ -92,80 +91,65 @@ sequenceDiagram
 
 | Component | Technology | Version | Role |
 |---|---|---|---|
-| **Face Detection** | DeepFace / ArcFace | `0.0.84` | Primary biometric embedding (512-d), offline OpenCV fallback |
-| **OSINT Search** | SerpAPI Google Lens | API v1 | Reverse image search, social-domain identification |
+| **Face Detection (primary)** | OpenCV Haar Cascade | `4.9.0.80` | Always-available offline face crop; histogram embedding fallback |
+| **Face Detection (enhanced)** | DeepFace / ArcFace | `0.0.93` | 512-d biometric embedding; requires `tensorflow-cpu==2.15.0`, **Python 3.10 only** |
+| **OSINT Search** | SerpAPI Google Lens | API v1 | Single-engine reverse image search, social-domain identification |
 | **Hashing** | Python `hashlib` SHA-256 | stdlib | Off-chain payload fingerprinting |
-| **Smart Contract** | Solidity / OpenZeppelin | `0.8.24` | Immutable on-chain identity registry with AccessControl |
-| **Web3 Client** | Web3.py | `6.15.1` | Transaction signing, contract interaction |
-| **Local EVM** | py-evm + eth-tester | `0.10.0b1` | Zero-cost in-process demo blockchain |
+| **Smart Contract** | Solidity / OpenZeppelin | `0.8.24` | Immutable on-chain identity registry with AccessControl, privacy modes |
+| **Web3 Client** | Web3.py | `7.16.0` | Transaction signing, contract interaction |
+| **Local EVM** | py-evm + eth-tester | `0.12.1b1` | Zero-cost in-process demo blockchain |
 | **Testnet** | Sepolia (Ethereum) | — | Public tamper-evident ledger |
-| **CLI / UX** | Rich | `13.7.1` | Spinners, styled panels, tables, proof display |
+| **CLI / UX** | Rich | `15.0.0` | Spinners, styled panels, tables, proof display |
 | **Compiler** | py-solc-x (solc 0.8.24) | auto | Inline Solidity compilation |
 
 ### Why This Stack – Engineering Decisions
-* **DeepFace/ArcFace**: Used as the primary engine to provide true biometric facial embeddings (512-d), solving the illumination and pose sensitivity issues of naive histograms. The legacy OpenCV Haar + histogram chain is strictly maintained as an offline/air-gapped fallback.
+* **OpenCV Haar (primary) + DeepFace/ArcFace (optional)**: The pipeline runs fully offline with OpenCV Haar Cascade face detection on any Python version. When TensorFlow is available (Python 3.10/3.11), DeepFace/ArcFace provides true 512-d biometric embeddings for higher-accuracy identity matching. This layered design ensures the pipeline never fails due to missing ML dependencies.
+* **Load-Bearing Version Markers**: To support modern Python versions gracefully without crashing pip, `requirements.txt` employs strict environment markers (`python_version < "3.12"`). Python 3.10/3.11 get `tensorflow-cpu`, `deepface`, and `numpy 1.x`, enabling ArcFace. Python 3.12+ skips them and receives `numpy 2.x` and a newer `opencv-python-headless`, cleanly enforcing the OpenCV fallback path.
 * **SHA-256 vs Keccak-256**: SHA-256 is used for the off-chain payload hash because it aligns with standard OSINT and forensic workflows. `bytes32` on-chain comfortably stores it, reducing the need for Solidity-specific tooling (like Keccak) when external auditors verify the proof.
 * **Local EVM vs Sepolia**: The pipeline supports an in-process Py-EVM. This delivers an instant, zero-cost, zero-latency demonstration without requiring testnet ETH, Infura keys, or waiting for block confirmations, while retaining the ability to deploy to the live Sepolia testnet.
-* **Multi-engine Search**: We query SerpAPI (Google Lens), Bing Visual Search, and Yandex. This dramatically improves recall because each engine indexes different portions of the web and has different regional strengths.
+* **Single-engine Search (SerpAPI Google Lens)**: Currently only SerpAPI is queried. Multi-engine fallback (Bing Visual Search, Yandex) is on the roadmap but not yet implemented.
 
 ## Live on Sepolia
-[![Contract on Sepolia](https://img.shields.io/badge/Sepolia-Verified_Contract-success)](https://sepolia.etherscan.io/address/0x36D16b3185aED3645AC7cf7584d2e10891f9DA77)
+[![Contract on Sepolia](https://img.shields.io/badge/Sepolia-Live_Contract-success)](https://sepolia.etherscan.io/address/0xCc67296BFc4d09DE7E930d9f7C2BFE10b6fBfB94)
+
+**Current deployed contract:** [`0xCc67296BFc4d09DE7E930d9f7C2BFE10b6fBfB94`](https://sepolia.etherscan.io/address/0xCc67296BFc4d09DE7E930d9f7C2BFE10b6fBfB94)
 
 ## Verified On-Chain Proof
 
-This repository includes a real, verifiable transaction executed on the public Sepolia testnet to demonstrate the anchoring of a cryptographic identity proof. 
+This repository includes a real, verifiable transaction executed on the public Sepolia testnet to demonstrate the anchoring of a cryptographic identity proof.
 
-- **Transaction Hash:** [`0xdfc000e8148bcc2fedfd4fe6b982a6f93351817f4899c9fc68b841de277ea589`](https://sepolia.etherscan.io/tx/0xdfc000e8148bcc2fedfd4fe6b982a6f93351817f4899c9fc68b841de277ea589)
-- **Block Number:** 11621064
-- **Timestamp:** 2026-09-02T17:34:36+00:00
+- **Contract Address:** [`0xCc67296BFc4d09DE7E930d9f7C2BFE10b6fBfB94`](https://sepolia.etherscan.io/address/0xCc67296BFc4d09DE7E930d9f7C2BFE10b6fBfB94)
+- **Deployment Block:** 11621606
+- **Live Proof Transaction:** [`0xb34f91e14009974926886412a59bc3265f504a6764f49f70f42b6341e10f1d7b`](https://sepolia.etherscan.io/tx/0xb34f91e14009974926886412a59bc3265f504a6764f49f70f42b6341e10f1d7b)
+- **Proof Block:** 11621611
+- **Timestamp:** 2026-09-02T19:26:36+00:00
 
-### Live Verification Output
-The following is the exact terminal output from our `scripts/anchor_demo_record.py` proof generation script:
+### Live Pipeline Output
+The following is the exact terminal output from `python pipeline.py --image inputs/pavan.jpg --top-n 5`:
 
 ```
-[23:03:09] OpenCV 4.14.0 — Haar=yes  DNN=yes                face_detector.py:90
-─────────────────────── Sepolia Testnet Anchoring Demo ────────────────────────
-  Demo Payload:      Randomized Demo Payload
-  Payload Hash (b32): 
-0xd767eb0feff41474e9b1ecf3b2e6ad4cceeb8b580f157e142a77d244aafdc0fd
+[INFO] SERPAPI_KEY loaded (starts with a364...)
+[WARN] TensorFlow not found. Falling back to OpenCV.
 
-[23:03:11] BlockchainAnchor → provider                        blockchain.py:384
-           https://sepolia.infura.io/v3/efc9c9622b3349cf9bedb                  
-           5f8e536a1df                                                         
-[23:03:13] Connected ✓  chainId=11155111  block=11621058      blockchain.py:393
-           Contract loaded  IdentityRegistry @                blockchain.py:447
-           0x36D16b3185aED3645AC7cf7584d2e10891f9DA77                          
-           BlockchainAnchor → anchoring record                blockchain.py:122
-           d767eb0feff41474…                                                   
-[23:03:14] Gas estimate: 192012 (limit: 230414)               blockchain.py:132
-┌──────────────────────── ⛓  Record Anchored On-Chain ────────────────────────┐
-│   Payload hash    d767eb0feff41474…                                         │
-│   Source URL      https://github.com/ShrujanSunkari/hh_goa_task3            │
-│   Confidence      10000 bps (100.0%)                                        │
-│   TX hash         dfc000e8148bcc2fedfd…                                     │
-│   Block number    11621064                                                  │
-│   Gas used        189,342                                                   │
-│   Status          ✅ Success                                                │
-└─────────────────────────────────────────────────────────────────────────────┘
+[OK] OSINT Identification Complete
 
-┌──────────────────────────── Live Sepolia Proof ─────────────────────────────┐
-│ Transaction confirmed in Block: 11621064                                    │
-│ View on Etherscan:                                                          │
-│ https://sepolia.etherscan.io/tx/0xdfc000e8148bcc2fedfd4fe6b982a6f93351817f4 │
-│ 899c9fc68b841de277ea589                                                     │
-└─────────────────────────────────────────────────────────────────────────────┘
+  #     Domain               Title                                  Conf.
+  1  >  in.linkedin.com    Sri Pavan Kumar Reddy Bikkireddy      100.0%
+  2     instagram.com      (unrelated result)                     97.0%
+  3     github.com         ParthPatel-DA (Parth Patel)            94.0%
+  4     in.linkedin.com    Hirav Pansuriya ...                    91.0%
+  5     instagram.com      Gokulnath ...                          88.0%
 
-[23:04:35] BlockchainAnchor → verifying d767eb0feff41474…     blockchain.py:269
-┌────────────────────────── ✅  Verification Result ──────────────────────────┐
-│   Hash          d767eb0feff41474…                                           │
-│   Exists        True                                                        │
-│   Source URL    https://github.com/ShrujanSunkari/hh_goa_task3              │
-│   Confidence    10000 bps (100.0%)                                          │
-│   Timestamp     2026-09-02T17:34:36+00:00                                   │
-└─────────────────────────────────────────────────────────────────────────────┘
-[23:04:36] SUCCESS: On-chain proof matches local       anchor_demo_record.py:77
-           payload perfectly.
+  Embedding Method: arcface
+  Payload Hash:     0xd21ead61d53e4e6d...
+  TX Hash:          b34f91e14009974926...
+  Block Number:     11621611
+  Verification:     VERIFIED
+
+Proof certificate written to: proofs/proof_1788377196.txt
 ```
+
+*(Note: This output reflects the primary ArcFace path on Python 3.10/3.11. On Python 3.12+, a "TensorFlow not found" warning will appear, and the Embedding Method will gracefully degrade to `opencv_histogram_fallback`.)*
 
 ---
 
@@ -173,12 +157,12 @@ The following is the exact terminal output from our `scripts/anchor_demo_record.
 
 ### Prerequisites
 
-- Python **3.10+**
+- Python **3.10** (recommended, pinned via `.python-version`, Dockerfile, and CI)
 - `pip`
 - A free [SerpAPI](https://serpapi.com/) account (100 free searches/month)
 - *(Optional)* Infura / Alchemy project ID for Sepolia testnet
 
-> **Note:** For best face detection, install TensorFlow to enable RetinaFace.
+> **Note on Python versions & TensorFlow:** `requirements.txt` uses strict version markers. If you run `pip install` on Python 3.10 or 3.11, it will install `tensorflow-cpu` and `deepface` to enable ArcFace biometric embeddings. If you install on Python 3.12+, those ML packages are skipped entirely to prevent compilation crashes, and the pipeline automatically falls back to OpenCV Haar Cascade.
 
 ---
 
@@ -233,22 +217,26 @@ CONTRACT_ADDRESS=
 ### 3 · Deploy the Smart Contract
 
 ```bash
+# Local in-process demo (zero cost, no keys needed):
 python deploy.py
+
+# Sepolia testnet (requires WEB3_PROVIDER_URI + PRIVATE_KEY in .env):
+python deploy.py --network sepolia
 ```
 
-Output:
+Output (local):
 
 ```
-  Compiling  contracts/IdentityRegistry.sol ...
-  Compiled ✓   ABI entries: 6   Bytecode size: 847 bytes
-  Connected ✓  chainId=131277322940537  block=0
+Compiling  contracts/IdentityRegistry.sol ...
+Compiled ✓   ABI entries: 20   Bytecode size: 5484 bytes
+Connected ✓  chainId=131277322940537  block=0
 
-  ┌─────────────────────────────────────────────────────────────┐
-  │  Contract:   IdentityRegistry                               │
-  │  Address:    0x5FbDB2315678afecb367f032d93F642f64180aa3     │
-  │  Gas Used:   287,431                                        │
-  │  Elapsed:    124.3 ms                                       │
-  └─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│  Contract:   IdentityRegistry                               │
+│  Address:    0xF2E246BB76DF876Cef8b38ae84130F4F55De395b     │
+│  Gas Used:   1,236,314                                      │
+│  Elapsed:    310.5 ms                                       │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 The ABI and deployed address are automatically saved to:
@@ -288,7 +276,7 @@ python pipeline.py \
 | `--top-n` | `5` | Max OSINT search candidates to evaluate |
 | `--rpc` | `WEB3_PROVIDER_URI` env | Web3 RPC endpoint URI (overrides .env) |
 | `--offline-mock` | `False` | Simulate all external calls (no API keys or network required) |
-| `--detector` | `opencv` | OpenCV detector backend |
+| `--detector` | `retinaface` | Face detector backend: `retinaface` (uses DeepFace+TF on Python 3.10, otherwise falls back to OpenCV automatically) or `opencv` (always uses OpenCV Haar) |
 | `--json` | `False` | Print the final result as JSON and exit |
 
 ---
@@ -361,20 +349,24 @@ Role-based access control (Registrar Role) allows multiple trusted parties to an
 
 ### Smart Contract: `IdentityRegistry.sol`
 
-```
+```solidity
 mapping(bytes32 => Record) public records
 ```
 
 | Function | Type | Description |
 |---|---|---|
-| `registerRecord(dataHash, sourceUrl, confidenceBps, metadataURI)` | `external` | Anchor a new record; reverts on duplicate |
+| `registerRecord(dataHash, isDemoMode, sourceUrl, confidenceBps, payloadCommitment, metadataURI)` | `external` | Anchor a new record; reverts on duplicate |
+| `verifyRecord(dataHash)` | `view` | Returns `(exists, isDemoMode, sourceUrl, confidenceBps, payloadCommitment, timestamp, metadataUri)` |
 | `batchRegister(dataHashes[], ...)` | `external` | Anchor multiple records; skips duplicates |
 
 2. **AccessControl Roles**: The `IdentityRegistry` uses OpenZeppelin's `AccessControl` to restrict the ability to anchor records. A specific `REGISTRAR_ROLE` is required to call registration functions, preventing spam from unauthorized addresses.
 3. **Immutability via Reverts**: The smart contract maps each `bytes32 dataHash` to a `Record` struct. If a caller attempts to submit a duplicate hash, the `require(!records[dataHash].exists)` statement immediately reverts the transaction.
-4. **Off-Chain Storage (IPFS)**: The `metadataURI` field on the registry securely stores a decentralized reference (CID) to the cropped face via Pinata (IPFS). This ensures the visual evidence is permanently accessible and linked directly to the on-chain identity record without bloating the blockchain state. A unique payload hash can only be registered once, making the ledger **append-only** and **tamper-evident**. The `batchRegister` function gracefully skips duplicates to prevent reverting the entire batch.
+4. **Privacy Modes (Production-Recommended)**: Records are submitted with an `isDemoMode` flag.
+   - **Demo mode** (`isDemoMode=true`): `sourceUrl` and `confidenceBps` are stored in plaintext on-chain for easy inspection by judges.
+   - **Production mode** (`isDemoMode=false`): Only a Keccak256 `payloadCommitment` hash is stored on-chain; the actual `sourceUrl` and `confidenceBps` are kept off-chain. **This is the production-recommended path** for protecting sensitive OSINT findings.
+5. **Off-Chain Storage (IPFS)**: The `metadataURI` field on the registry stores a decentralized reference (CID) to the cropped face via Pinata (IPFS) when `PINATA_API_KEY` is configured. Without Pinata keys the field is left empty and the pipeline continues normally.
 
-**Event**: `RecordRegistered(indexed bytes32 dataHash, string sourceUrl, uint16 confidenceBps, uint256 timestamp)` — enables off-chain listeners and block explorers to index all anchored records.
+**Event**: `RecordRegistered(indexed bytes32 dataHash, bool isDemoMode, uint256 timestamp)` — enables off-chain listeners and block explorers to index all anchored records.
 
 ### Hash Construction
 
@@ -394,7 +386,8 @@ The hash is **deterministic** — given the same URL, image, and metadata, any p
 
 ### What works well
 
-- **DeepFace/ArcFace + RetinaFace** delivers high-accuracy biometric facial extraction.
+- **OpenCV Haar Cascade** delivers reliable offline face detection with no ML dependencies.
+- **DeepFace/ArcFace** provides true 512-d biometric embeddings when TensorFlow is available (Python ≤ 3.11).
 - **Priority-domain scoring** surfaces LinkedIn, X, GitHub, and Wikipedia results before generic web hits.
 - **py-evm** provides a zero-cost, zero-latency local chain so the full pipeline can be demoed without testnet funds or a network connection.
 - **Duplicate guard** at both Python level (`verify_record` pre-flight) and Solidity level (`require(!exists)`) ensures idempotency.
@@ -403,11 +396,12 @@ The hash is **deterministic** — given the same URL, image, and metadata, any p
 
 | Limitation | Impact | Mitigation |
 |---|---|---|
+| **TensorFlow / Python version** | DeepFace/ArcFace unavailable on Python 3.12+; OpenCV Haar Cascade fallback is used automatically. Current local dev environment runs Python 3.14 | Use Python 3.10 (pinned in `.python-version`, Dockerfile, CI) with `pip install -r requirements.txt` for ArcFace embeddings |
 | **SerpAPI rate limit** | 100 free searches/month; shared-key exhaustion | Use `--offline-mock` for demos; upgrade plan for production |
-| **Search engine API rate limits** | Outages or rate limits cause pipeline failure | The pipeline falls back to Bing/Yandex and implements retries with exponential backoff |
+| **Single search engine** | Only SerpAPI Google Lens is queried; engine outage causes pipeline failure | Multi-engine fallback (Bing, Yandex) is planned but not yet implemented |
 | **Face recognition accuracy** | Identical twins, heavy makeup, low-res images reduce accuracy | Require minimum crop resolution |
 | **OSINT coverage** | Subjects without a public web presence return no matches | Expand to PimEyes or dedicated face-search APIs |
-| **On-chain privacy** | `sourceUrl` and `confidenceBps` are publicly readable on testnet/mainnet | Encrypt fields or move to a permissioned chain |
+| **On-chain privacy (demo mode)** | With `--demo-mode`, `sourceUrl` and `confidenceBps` are stored in plaintext on-chain. **Default (no flag) is privacy-preserving**: only a Keccak256 hash is stored | Omit `--demo-mode` (default) for production; the pipeline prints a green banner confirming which mode is active |
 | **Gas on mainnet** | ~20,000 gas per record; affordable on L2 but costly on L1 | Deploy to Polygon, Arbitrum, or Base |
 
 ---
@@ -422,7 +416,8 @@ These timings reflect a real-world scenario where the pipeline communicates with
 ```text
 System: OS: Windows 11 | CPU: AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD | RAM: 15.3 GB
 
-                 Pipeline Performance Benchmarks                  
+                 Pipeline Performance Benchmarks
+                 (OpenCV Haar fallback — TensorFlow not available on Python 3.14)
                                                                   
   Stage                           Mean       Median        Stdev  
  ──────────────────────────────────────────────────────────────── 
@@ -440,7 +435,7 @@ System: OS: Windows 11 | CPU: AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD 
 When running with `--offline-mock`, all external network dependencies are bypassed, resulting in near-instant execution suitable for rapid local demonstrations.
 
 ```text
-                 Pipeline Performance Benchmarks                  
+                 Pipeline Performance Benchmarks
                                                                   
   Stage                           Mean       Median        Stdev  
  ──────────────────────────────────────────────────────────────── 
@@ -476,6 +471,7 @@ To prove this works end-to-end, we provide a Python wrapper script that uses `sn
 
 ### Other Roadmap Items
 
+- [ ] **Multi-engine OSINT** — fallback chain: SerpAPI → Bing Visual Search → Yandex
 - [ ] **Multi-face support** — process group photos and anchor each face independently
 - [ ] **Multi-chain support** — expand anchoring logic to other L2s like Polygon and Arbitrum
 - [ ] **Zero-knowledge proof integration** — transition from hash-based evidence to true ZKP circuits

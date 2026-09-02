@@ -160,8 +160,10 @@ contract IdentityRegistry is AccessControl {
 
     struct Record {
         bytes32 dataHash;
+        bool    isDemoMode;
         string  sourceUrl;
         uint16  confidenceBps;
+        bytes32 payloadCommitment;
         uint256 timestamp;
         bool    exists;
         string  metadataURI;
@@ -171,15 +173,16 @@ contract IdentityRegistry is AccessControl {
 
     event RecordRegistered(
         bytes32 indexed dataHash,
-        string          sourceUrl,
-        uint16          confidenceBps,
+        bool            isDemoMode,
         uint256         timestamp
     );
 
     function registerRecord(
         bytes32        dataHash,
+        bool           isDemoMode,
         string calldata sourceUrl,
         uint16         confidenceBps,
+        bytes32        payloadCommitment,
         string calldata metadataURI
     ) external onlyRole(REGISTRAR_ROLE) {
         require(dataHash != bytes32(0),            "IdentityRegistry: zero dataHash");
@@ -189,26 +192,32 @@ contract IdentityRegistry is AccessControl {
         uint256 ts = block.timestamp;
 
         records[dataHash] = Record({
-            dataHash:      dataHash,
-            sourceUrl:     sourceUrl,
-            confidenceBps: confidenceBps,
-            timestamp:     ts,
-            exists:        true,
-            metadataURI:   metadataURI
+            dataHash:          dataHash,
+            isDemoMode:        isDemoMode,
+            sourceUrl:         sourceUrl,
+            confidenceBps:     confidenceBps,
+            payloadCommitment: payloadCommitment,
+            timestamp:         ts,
+            exists:            true,
+            metadataURI:       metadataURI
         });
 
-        emit RecordRegistered(dataHash, sourceUrl, confidenceBps, ts);
+        emit RecordRegistered(dataHash, isDemoMode, ts);
     }
 
     function batchRegister(
         bytes32[] calldata dataHashes,
+        bool[] calldata isDemoModes,
         string[] calldata sourceUrls,
         uint16[] calldata confidenceBpsArray,
+        bytes32[] calldata payloadCommitments,
         string[] calldata metadataURIs
     ) external onlyRole(REGISTRAR_ROLE) {
         require(
+            dataHashes.length == isDemoModes.length &&
             dataHashes.length == sourceUrls.length &&
             dataHashes.length == confidenceBpsArray.length &&
+            dataHashes.length == payloadCommitments.length &&
             dataHashes.length == metadataURIs.length,
             "IdentityRegistry: arrays length mismatch"
         );
@@ -224,15 +233,17 @@ contract IdentityRegistry is AccessControl {
             uint256 ts = block.timestamp;
 
             records[dataHash] = Record({
-                dataHash:      dataHash,
-                sourceUrl:     sourceUrls[i],
-                confidenceBps: confidenceBpsArray[i],
-                timestamp:     ts,
-                exists:        true,
-                metadataURI:   metadataURIs[i]
+                dataHash:          dataHash,
+                isDemoMode:        isDemoModes[i],
+                sourceUrl:         sourceUrls[i],
+                confidenceBps:     confidenceBpsArray[i],
+                payloadCommitment: payloadCommitments[i],
+                timestamp:         ts,
+                exists:            true,
+                metadataURI:       metadataURIs[i]
             });
 
-            emit RecordRegistered(dataHash, sourceUrls[i], confidenceBpsArray[i], ts);
+            emit RecordRegistered(dataHash, isDemoModes[i], ts);
         }
     }
 
@@ -241,13 +252,15 @@ contract IdentityRegistry is AccessControl {
         view
         returns (
             bool    exists,
+            bool    isDemoMode,
             string  memory sourceUrl,
             uint16  confidenceBps,
+            bytes32 payloadCommitment,
             uint256 timestamp,
             string  memory metadataURI
         )
     {
         Record storage r = records[dataHash];
-        return (r.exists, r.sourceUrl, r.confidenceBps, r.timestamp, r.metadataURI);
+        return (r.exists, r.isDemoMode, r.sourceUrl, r.confidenceBps, r.payloadCommitment, r.timestamp, r.metadataURI);
     }
 }

@@ -84,6 +84,7 @@ class BlockchainAnchor:
         confidence_bps: int,
         metadata_uri: str = "",
         image_path: Optional[str] = None,
+        demo_mode: bool = False,
     ) -> Dict:
         """
         Call ``registerRecord`` on the deployed contract and return tx metadata.
@@ -107,7 +108,29 @@ class BlockchainAnchor:
         self._ensure_ready()
 
         if image_path and not metadata_uri:
-            metadata_uri = self._upload_to_ipfs(image_path)
+            # Upload image first
+            image_cid_uri = self._upload_to_ipfs(file_path=image_path)
+
+            # Construct JSON metadata
+            import json
+            import base64
+            metadata = {
+                "source_url": source_url,
+                "confidence_bps": confidence_bps,
+                "image_uri": image_cid_uri
+            }
+
+            if not demo_mode:
+                from cryptography.fernet import Fernet
+                # Generate a symmetric key from the 32-byte payload hash
+                key = base64.urlsafe_b64encode(b32)
+                f = Fernet(key)
+                encrypted_payload = f.encrypt(json.dumps(metadata).encode("utf-8")).decode("utf-8")
+                final_json = {"encrypted_payload": encrypted_payload}
+            else:
+                final_json = metadata
+
+            metadata_uri = self._upload_to_ipfs(json_data=final_json)
 
         w3 = self._w3
         contract = self._contract
@@ -126,9 +149,21 @@ class BlockchainAnchor:
             f"[green]{b32.hex()[:16]}…[/]"
         )
 
+        if demo_mode:
+            c_is_demo = True
+            c_source = source_url
+            c_conf = confidence_bps
+            c_commit = b"\x00" * 32
+        else:
+            from web3 import Web3
+            c_is_demo = False
+            c_source = ""
+            c_conf = 0
+            c_commit = Web3.solidity_keccak(["string", "uint16"], [source_url, confidence_bps])
+
         try:
             gas_estimate = contract.functions.registerRecord(
-                b32, source_url, confidence_bps, metadata_uri
+                b32, c_is_demo, c_source, c_conf, c_commit, metadata_uri
             ).estimate_gas({"from": sender})
             gas_limit = int(gas_estimate * 1.2)
             console.log(f"[dim]Gas estimate: {gas_estimate} (limit: {gas_limit})[/]")
@@ -146,13 +181,13 @@ class BlockchainAnchor:
         if private_key:
             nonce = w3.eth.get_transaction_count(sender, "pending")
             tx = contract.functions.registerRecord(
-                b32, source_url, confidence_bps, metadata_uri
+                b32, c_is_demo, c_source, c_conf, c_commit, metadata_uri
             ).build_transaction({**tx_kwargs, "from": sender, "nonce": nonce})
             signed = w3.eth.account.sign_transaction(tx, private_key)
             tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
         else:
             tx_hash = contract.functions.registerRecord(
-                b32, source_url, confidence_bps, metadata_uri
+                b32, c_is_demo, c_source, c_conf, c_commit, metadata_uri
             ).transact({**tx_kwargs, "from": sender})
 
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=300)
@@ -185,6 +220,7 @@ class BlockchainAnchor:
         source_urls: list[str],
         confidence_bps_list: list[int],
         metadata_uris: list[str],
+        demo_mode: bool = False,
     ) -> Dict:
         """
         Call ``batchRegister`` on the deployed contract and return tx metadata.
@@ -208,9 +244,24 @@ class BlockchainAnchor:
             f"[bold cyan]BlockchainAnchor[/] → batch anchoring {len(b32_list)} records"
         )
 
+        if demo_mode:
+            c_is_demo_list = [True] * len(b32_list)
+            c_source_list = source_urls
+            c_conf_list = confidence_bps_list
+            c_commit_list = [b"\x00" * 32] * len(b32_list)
+        else:
+            from web3 import Web3
+            c_is_demo_list = [False] * len(b32_list)
+            c_source_list = [""] * len(b32_list)
+            c_conf_list = [0] * len(b32_list)
+            c_commit_list = [
+                Web3.solidity_keccak(["string", "uint16"], [s, c])
+                for s, c in zip(source_urls, confidence_bps_list)
+            ]
+
         try:
             gas_estimate = contract.functions.batchRegister(
-                b32_list, source_urls, confidence_bps_list, metadata_uris
+                b32_list, c_is_demo_list, c_source_list, c_conf_list, c_commit_list, metadata_uris
             ).estimate_gas({"from": sender})
             gas_limit = int(gas_estimate * 1.2)
             console.log(
@@ -230,13 +281,13 @@ class BlockchainAnchor:
         if private_key:
             nonce = w3.eth.get_transaction_count(sender, "pending")
             tx = contract.functions.batchRegister(
-                b32_list, source_urls, confidence_bps_list, metadata_uris
+                b32_list, c_is_demo_list, c_source_list, c_conf_list, c_commit_list, metadata_uris
             ).build_transaction({**tx_kwargs, "from": sender, "nonce": nonce})
             signed = w3.eth.account.sign_transaction(tx, private_key)
             tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
         else:
             tx_hash = contract.functions.batchRegister(
-                b32_list, source_urls, confidence_bps_list, metadata_uris
+                b32_list, c_is_demo_list, c_source_list, c_conf_list, c_commit_list, metadata_uris
             ).transact({**tx_kwargs, "from": sender})
 
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
@@ -283,9 +334,15 @@ class BlockchainAnchor:
                 f"[yellow]{b32.hex()[:16]}…[/]"
             )
 
-        exists, source_url, confidence_bps, timestamp, metadata_uri = (
-            self._contract.functions.verifyRecord(b32).call()
-        )
+        (
+            exists,
+            is_demo_mode,
+            source_url,
+            confidence_bps,
+            payload_commitment,
+            timestamp,
+            metadata_uri,
+        ) = self._contract.functions.verifyRecord(b32).call()
 
         ts_fmt = (
             datetime.fromtimestamp(timestamp, tz=timezone.utc).isoformat()
@@ -295,8 +352,10 @@ class BlockchainAnchor:
 
         result: Dict = {
             "exists": exists,
+            "is_demo_mode": is_demo_mode,
             "source_url": source_url,
             "confidence_bps": confidence_bps,
+            "payload_commitment": payload_commitment.hex() if isinstance(payload_commitment, bytes) else payload_commitment,
             "timestamp": timestamp,
             "timestamp_formatted": ts_fmt,
             "metadata_uri": metadata_uri,
@@ -310,14 +369,13 @@ class BlockchainAnchor:
     #  Private: IPFS via Pinata
     # ─────────────────────────────────────────────────────────────────────────
 
-    def _upload_to_ipfs(self, image_path: str) -> str:
+    def _upload_to_ipfs(self, file_path: Optional[str] = None, json_data: Optional[Dict] = None) -> str:
         api_key = os.getenv("PINATA_API_KEY")
         secret = os.getenv("PINATA_SECRET_API_KEY")
         if not api_key or not secret:
             console.log("[yellow]Pinata keys not found, skipping IPFS upload[/]")
             return ""
 
-        console.log(f"[cyan]Uploading {image_path} to IPFS via Pinata...[/]")
         import requests
 
         headers = {
@@ -325,13 +383,25 @@ class BlockchainAnchor:
             "pinata_secret_api_key": secret,
         }
         try:
-            with open(image_path, "rb") as f:
+            if file_path:
+                console.log(f"[cyan]Uploading {file_path} to IPFS via Pinata...[/]")
+                with open(file_path, "rb") as f:
+                    response = requests.post(
+                        "https://api.pinata.cloud/pinning/pinFileToIPFS",
+                        files={"file": f},
+                        headers=headers,
+                        timeout=15,
+                    )
+            elif json_data:
+                console.log(f"[cyan]Uploading metadata JSON to IPFS via Pinata...[/]")
                 response = requests.post(
-                    "https://api.pinata.cloud/pinning/pinFileToIPFS",
-                    files={"file": f},
+                    "https://api.pinata.cloud/pinning/pinJSONToIPFS",
+                    json={"pinataContent": json_data},
                     headers=headers,
                     timeout=15,
                 )
+            else:
+                return ""
             if response.status_code == 200:
                 cid = response.json().get("IpfsHash")
                 console.log(f"[green]Uploaded to IPFS: ipfs://{cid}[/]")

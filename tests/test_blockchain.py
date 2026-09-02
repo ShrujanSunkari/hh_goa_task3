@@ -46,7 +46,7 @@ def test_non_registrar_cannot_register(setup):
     data_hash = b"\x01" * 32
     with pytest.raises(Exception) as excinfo:
         contract.functions.registerRecord(
-            data_hash, "https://test.com", 5000, "ipfs://test"
+            data_hash, True, "https://test.com", 5000, b"\x00" * 32, "ipfs://test"
         ).transact({"from": other_account})
 
     assert "AccessControl" in str(excinfo.value) or "revert" in str(excinfo.value)
@@ -65,7 +65,7 @@ def test_grant_registrar_role(setup):
     # other_account can now register
     data_hash = b"\x02" * 32
     tx = contract.functions.registerRecord(
-        data_hash, "https://test.com", 5000, "ipfs://test"
+        data_hash, True, "https://test.com", 5000, b"\x00" * 32, "ipfs://test"
     ).transact({"from": other_account})
 
     receipt = w3.eth.wait_for_transaction_receipt(tx)
@@ -77,10 +77,10 @@ def test_metadata_uri_stored(setup):
 
     data_hash = b"\x03" * 32
     contract.functions.registerRecord(
-        data_hash, "https://linkedin.com", 9900, "ipfs://metadata"
+        data_hash, True, "https://linkedin.com", 9900, b"\x00" * 32, "ipfs://metadata"
     ).transact({"from": deployer})
 
-    exists, source_url, confidence_bps, timestamp, metadata_uri = (
+    exists, is_demo_mode, source_url, confidence_bps, payload_commitment, timestamp, metadata_uri = (
         contract.functions.verifyRecord(data_hash).call()
     )
 

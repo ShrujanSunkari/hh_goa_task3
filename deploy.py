@@ -111,6 +111,8 @@ def compile_contract() -> tuple[list, str]:
         output_values=["abi", "bin"],
         solc_version=SOLC_VERSION,
         import_remappings=["@openzeppelin=node_modules/@openzeppelin"],
+        optimize=True,
+        optimize_runs=200
     )
 
     # The compiled dict key looks like "contracts/IdentityRegistry.sol:IdentityRegistry" or absolute path
@@ -201,6 +203,10 @@ def deploy_contract(w3: object, abi: list, bytecode: str) -> dict:
     import re as _re
 
     private_key = raw_key if (_re.fullmatch(r"[0-9a-fA-F]{64}", raw_key)) else ""
+    
+    # Ignore PRIVATE_KEY if running on the local in-process tester (which doesn't fund it)
+    if "EthereumTesterProvider" in str(type(w3.provider)):
+        private_key = ""
 
     if private_key:
         acct = w3.eth.account.from_key(private_key)

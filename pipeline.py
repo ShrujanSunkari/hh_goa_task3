@@ -24,7 +24,7 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 # ── Force UTF-8 on Windows (avoids CP-1252 UnicodeEncodeError) ───────────────
 if hasattr(sys.stdout, "buffer"):
@@ -138,6 +138,9 @@ def parse_args() -> argparse.Namespace:
     )
     p.add_argument(
         "--json", action="store_true", help="Print the final result as JSON and exit"
+    )
+    p.add_argument(
+        "--demo-mode", action="store_true", help="Store records in plaintext on-chain (default is privacy-preserving hashes)"
     )
     return p.parse_args()
 
@@ -435,6 +438,33 @@ def stage3_anchor(
     """Returns (tx_result, anchor_instance)."""
     _stage_rule(3, "On-Chain Anchoring & Mining", "magenta")
 
+    # ── Privacy-mode banner ───────────────────────────────────────────────────
+    if args.demo_mode:
+        console.print(
+            Panel(
+                "[bold yellow]⚠  DEMO MODE ACTIVE[/]\n\n"
+                "  [dim]sourceUrl[/] and [dim]confidenceBps[/] are stored in [bold red]PLAINTEXT[/] on-chain.\n"
+                "  Any observer of the blockchain can read the exact identity findings.\n\n"
+                "  This mode is intended for hackathon demos only.\n"
+                "  For production use, omit [cyan]--demo-mode[/] to store only a\n"
+                "  Keccak256 commitment ([green]privacy-preserving default[/]).",
+                title="[bold yellow]⚠  RUNNING IN DEMO MODE — sourceUrl IS STORED IN PLAINTEXT",
+                border_style="yellow",
+            )
+        )
+    else:
+        console.print(
+            Panel(
+                "[bold green]✓  PRIVACY MODE ACTIVE (default)[/]\n\n"
+                "  [dim]sourceUrl[/] and [dim]confidenceBps[/] will [bold]NOT[/] be written to the chain.\n"
+                "  Only a [bold cyan]Keccak256 payloadCommitment[/] hash is anchored on-chain.\n"
+                "  The actual findings remain off-chain and access-controlled.\n\n"
+                "  To store plaintext for demo purposes, add [yellow]--demo-mode[/] flag.",
+                title="[bold green]✓  PRIVACY-PRESERVING MODE — Only hash anchored on-chain",
+                border_style="green",
+            )
+        )
+
     if args.offline_mock:
         console.log("[dim]offline-mock: simulating contract call[/]")
         time.sleep(1.0)
@@ -461,11 +491,13 @@ def stage3_anchor(
             )
 
     if existing["exists"]:
+        source_disp = existing["source_url"] if existing.get("is_demo_mode", args.demo_mode) else "<Privacy Hash Commitment>"
+        conf_disp = f"{existing['confidence_bps']/100:.2f}%" if existing.get("is_demo_mode", args.demo_mode) else "<Privacy Hash Commitment>"
         console.print(
             Panel(
                 f"[bold yellow]This payload hash is already registered on-chain.[/]\n\n"
-                f"  Source URL:  {existing['source_url']}\n"
-                f"  Confidence:  {existing['confidence_bps']/100:.2f}%\n"
+                f"  Source URL:  {source_disp}\n"
+                f"  Confidence:  {conf_disp}\n"
                 f"  Timestamp:   {existing['timestamp_formatted']}\n\n"
                 "[dim]Skipping duplicate registration -- proceeding to verification.[/]",
                 title="[bold yellow] WARNING -- Duplicate Record Detected",
@@ -492,6 +524,7 @@ def stage3_anchor(
                 source_url=payload["source_url"],
                 confidence_bps=payload["confidence_bps"],
                 image_path=face.get("cropped_path"),
+                demo_mode=args.demo_mode,
             )
         except RuntimeError as exc:
             msg = str(exc)
@@ -555,11 +588,13 @@ def stage4_verify(
         time.sleep(0.5)
         ts_now = int(datetime.now(tz=timezone.utc).timestamp())
         ts_fmt = datetime.fromtimestamp(ts_now, tz=timezone.utc).isoformat()
+        disp_source = payload["source_url"] if args.demo_mode else "<Zero-Knowledge Hash Match>"
+        disp_conf = payload["confidence_bps"] if args.demo_mode else "<Zero-Knowledge Hash Match>"
         _print_proof(
             local_hash=payload_hash["hex"],
             on_chain_hash=payload_hash["hex"],
-            source_url=payload["source_url"],
-            confidence_bps=payload["confidence_bps"],
+            source_url=disp_source,
+            confidence_bps=disp_conf,
             block_number=tx["block_number"],
             ts_formatted=ts_fmt,
             hash_match=True,
@@ -567,8 +602,8 @@ def stage4_verify(
         return {
             "hash_match": True,
             "on_chain_hash": payload_hash["hex"],
-            "source_url": payload["source_url"],
-            "confidence_bps": payload["confidence_bps"],
+            "source_url": disp_source,
+            "confidence_bps": disp_conf,
             "block_number": tx["block_number"],
             "ts_formatted": ts_fmt,
         }
@@ -603,13 +638,23 @@ def stage4_verify(
             "Check your RPC node state or wait for blocks to sync.",
         )
 
-    hash_match = verification["source_url"] == payload["source_url"]
+    if verification.get("is_demo_mode", args.demo_mode):
+        hash_match = verification["source_url"] == payload["source_url"]
+        disp_source = verification["source_url"]
+        disp_conf = verification["confidence_bps"]
+    else:
+        from web3 import Web3
+        local_commit = Web3.solidity_keccak(["string", "uint16"], [payload["source_url"], payload["confidence_bps"]]).hex()
+        on_chain_commit = verification.get("payload_commitment", "")
+        hash_match = local_commit == on_chain_commit
+        disp_source = "<Zero-Knowledge Hash Match>" if hash_match else "MISMATCH"
+        disp_conf = "<Zero-Knowledge Hash Match>" if hash_match else "MISMATCH"
 
     _print_proof(
         local_hash=payload_hash["hex"],
         on_chain_hash=payload_hash["hex"],
-        source_url=verification["source_url"],
-        confidence_bps=verification["confidence_bps"],
+        source_url=disp_source,
+        confidence_bps=disp_conf,
         block_number=tx["block_number"],
         ts_formatted=verification["timestamp_formatted"],
         hash_match=hash_match,
@@ -621,8 +666,8 @@ def stage4_verify(
     return {
         "hash_match": hash_match,
         "on_chain_hash": payload_hash["hex"],
-        "source_url": verification["source_url"],
-        "confidence_bps": verification["confidence_bps"],
+        "source_url": disp_source,
+        "confidence_bps": disp_conf,
         "block_number": tx["block_number"],
         "ts_formatted": verification["timestamp_formatted"],
     }
@@ -632,7 +677,7 @@ def _print_proof(
     local_hash: str,
     on_chain_hash: str,
     source_url: str,
-    confidence_bps: int,
+    confidence_bps: Union[int, str],
     block_number: int,
     ts_formatted: str,
     hash_match: bool,
@@ -655,7 +700,10 @@ def _print_proof(
     proof.append(source_url + "\n", style="cyan")
 
     proof.append("  Confidence:       ", style="bold white")
-    proof.append(f"{confidence_bps / 100:.2f}%\n", style="green")
+    if isinstance(confidence_bps, int):
+        proof.append(f"{confidence_bps / 100:.2f}%\n", style="green")
+    else:
+        proof.append(f"{confidence_bps}\n", style="green")
 
     proof.append("  Block Timestamp:  ", style="bold white")
     proof.append(f"{ts_formatted}  (Block #{block_number})\n", style="yellow")
