@@ -140,7 +140,9 @@ def parse_args() -> argparse.Namespace:
         "--json", action="store_true", help="Print the final result as JSON and exit"
     )
     p.add_argument(
-        "--demo-mode", action="store_true", help="Store records in plaintext on-chain (default is privacy-preserving hashes)"
+        "--demo-mode",
+        action="store_true",
+        help="Store records in plaintext on-chain (default is privacy-preserving hashes)",
     )
     return p.parse_args()
 
@@ -491,8 +493,16 @@ def stage3_anchor(
             )
 
     if existing["exists"]:
-        source_disp = existing["source_url"] if existing.get("is_demo_mode", args.demo_mode) else "<Privacy Hash Commitment>"
-        conf_disp = f"{existing['confidence_bps']/100:.2f}%" if existing.get("is_demo_mode", args.demo_mode) else "<Privacy Hash Commitment>"
+        source_disp = (
+            existing["source_url"]
+            if existing.get("is_demo_mode", args.demo_mode)
+            else "<Privacy Hash Commitment>"
+        )
+        conf_disp = (
+            f"{existing['confidence_bps']/100:.2f}%"
+            if existing.get("is_demo_mode", args.demo_mode)
+            else "<Privacy Hash Commitment>"
+        )
         console.print(
             Panel(
                 f"[bold yellow]This payload hash is already registered on-chain.[/]\n\n"
@@ -588,8 +598,14 @@ def stage4_verify(
         time.sleep(0.5)
         ts_now = int(datetime.now(tz=timezone.utc).timestamp())
         ts_fmt = datetime.fromtimestamp(ts_now, tz=timezone.utc).isoformat()
-        disp_source = payload["source_url"] if args.demo_mode else "<Zero-Knowledge Hash Match>"
-        disp_conf = payload["confidence_bps"] if args.demo_mode else "<Zero-Knowledge Hash Match>"
+        disp_source = (
+            payload["source_url"] if args.demo_mode else "<Zero-Knowledge Hash Match>"
+        )
+        disp_conf = (
+            payload["confidence_bps"]
+            if args.demo_mode
+            else "<Zero-Knowledge Hash Match>"
+        )
         _print_proof(
             local_hash=payload_hash["hex"],
             on_chain_hash=payload_hash["hex"],
@@ -644,7 +660,10 @@ def stage4_verify(
         disp_conf = verification["confidence_bps"]
     else:
         from web3 import Web3
-        local_commit = Web3.solidity_keccak(["string", "uint16"], [payload["source_url"], payload["confidence_bps"]]).hex()
+
+        local_commit = Web3.solidity_keccak(
+            ["string", "uint16"], [payload["source_url"], payload["confidence_bps"]]
+        ).hex()
         on_chain_commit = verification.get("payload_commitment", "")
         hash_match = local_commit == on_chain_commit
         disp_source = "<Zero-Knowledge Hash Match>" if hash_match else "MISMATCH"

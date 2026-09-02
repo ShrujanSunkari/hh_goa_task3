@@ -114,18 +114,22 @@ class BlockchainAnchor:
             # Construct JSON metadata
             import json
             import base64
+
             metadata = {
                 "source_url": source_url,
                 "confidence_bps": confidence_bps,
-                "image_uri": image_cid_uri
+                "image_uri": image_cid_uri,
             }
 
             if not demo_mode:
                 from cryptography.fernet import Fernet
+
                 # Generate a symmetric key from the 32-byte payload hash
                 key = base64.urlsafe_b64encode(b32)
                 f = Fernet(key)
-                encrypted_payload = f.encrypt(json.dumps(metadata).encode("utf-8")).decode("utf-8")
+                encrypted_payload = f.encrypt(
+                    json.dumps(metadata).encode("utf-8")
+                ).decode("utf-8")
                 final_json = {"encrypted_payload": encrypted_payload}
             else:
                 final_json = metadata
@@ -156,10 +160,13 @@ class BlockchainAnchor:
             c_commit = b"\x00" * 32
         else:
             from web3 import Web3
+
             c_is_demo = False
             c_source = ""
             c_conf = 0
-            c_commit = Web3.solidity_keccak(["string", "uint16"], [source_url, confidence_bps])
+            c_commit = Web3.solidity_keccak(
+                ["string", "uint16"], [source_url, confidence_bps]
+            )
 
         try:
             gas_estimate = contract.functions.registerRecord(
@@ -251,6 +258,7 @@ class BlockchainAnchor:
             c_commit_list = [b"\x00" * 32] * len(b32_list)
         else:
             from web3 import Web3
+
             c_is_demo_list = [False] * len(b32_list)
             c_source_list = [""] * len(b32_list)
             c_conf_list = [0] * len(b32_list)
@@ -261,7 +269,12 @@ class BlockchainAnchor:
 
         try:
             gas_estimate = contract.functions.batchRegister(
-                b32_list, c_is_demo_list, c_source_list, c_conf_list, c_commit_list, metadata_uris
+                b32_list,
+                c_is_demo_list,
+                c_source_list,
+                c_conf_list,
+                c_commit_list,
+                metadata_uris,
             ).estimate_gas({"from": sender})
             gas_limit = int(gas_estimate * 1.2)
             console.log(
@@ -281,13 +294,23 @@ class BlockchainAnchor:
         if private_key:
             nonce = w3.eth.get_transaction_count(sender, "pending")
             tx = contract.functions.batchRegister(
-                b32_list, c_is_demo_list, c_source_list, c_conf_list, c_commit_list, metadata_uris
+                b32_list,
+                c_is_demo_list,
+                c_source_list,
+                c_conf_list,
+                c_commit_list,
+                metadata_uris,
             ).build_transaction({**tx_kwargs, "from": sender, "nonce": nonce})
             signed = w3.eth.account.sign_transaction(tx, private_key)
             tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
         else:
             tx_hash = contract.functions.batchRegister(
-                b32_list, c_is_demo_list, c_source_list, c_conf_list, c_commit_list, metadata_uris
+                b32_list,
+                c_is_demo_list,
+                c_source_list,
+                c_conf_list,
+                c_commit_list,
+                metadata_uris,
             ).transact({**tx_kwargs, "from": sender})
 
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
@@ -355,7 +378,11 @@ class BlockchainAnchor:
             "is_demo_mode": is_demo_mode,
             "source_url": source_url,
             "confidence_bps": confidence_bps,
-            "payload_commitment": payload_commitment.hex() if isinstance(payload_commitment, bytes) else payload_commitment,
+            "payload_commitment": (
+                payload_commitment.hex()
+                if isinstance(payload_commitment, bytes)
+                else payload_commitment
+            ),
             "timestamp": timestamp,
             "timestamp_formatted": ts_fmt,
             "metadata_uri": metadata_uri,
@@ -369,7 +396,9 @@ class BlockchainAnchor:
     #  Private: IPFS via Pinata
     # ─────────────────────────────────────────────────────────────────────────
 
-    def _upload_to_ipfs(self, file_path: Optional[str] = None, json_data: Optional[Dict] = None) -> str:
+    def _upload_to_ipfs(
+        self, file_path: Optional[str] = None, json_data: Optional[Dict] = None
+    ) -> str:
         api_key = os.getenv("PINATA_API_KEY")
         secret = os.getenv("PINATA_SECRET_API_KEY")
         if not api_key or not secret:
