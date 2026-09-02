@@ -20,7 +20,7 @@ from pipeline import (
     stage3_anchor,
     stage4_verify,
     compute_final_verdict,
-    generate_proof_certificate
+    generate_proof_certificate,
 )
 
 app = FastAPI(title="HH GOA 2026 Face Identification API")
@@ -28,32 +28,35 @@ app = FastAPI(title="HH GOA 2026 Face Identification API")
 # Require API key from env
 API_KEY = os.environ.get("API_KEY")
 
+
 async def verify_api_key(x_api_key: str = Header(...)):
     if not API_KEY:
         raise HTTPException(status_code=500, detail="Server API_KEY not configured")
     if x_api_key != API_KEY:
         raise HTTPException(status_code=403, detail="Forbidden: Invalid API Key")
 
+
 class HealthCheckResponse(BaseModel):
     status: str
+
 
 @app.get("/health", response_model=HealthCheckResponse)
 def health_check():
     return {"status": "ok"}
 
+
 @app.post("/verify")
 def verify_identity(
-    file: UploadFile = File(...),
-    api_key: str = Depends(verify_api_key)
+    file: UploadFile = File(...), api_key: str = Depends(verify_api_key)
 ) -> Dict[str, Any]:
     # 1. Save uploaded file temporarily
     inputs_dir = Path("inputs")
     inputs_dir.mkdir(exist_ok=True)
-    
+
     file_path = inputs_dir / f"uploaded_{file.filename}"
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
-        
+
     try:
         # 2. Setup mock args for the pipeline
         args = argparse.Namespace(
@@ -64,41 +67,49 @@ def verify_identity(
             detector="opencv",
             model="histogram",
             json=True,
-            auto_demo=False
+            auto_demo=False,
         )
-        
+
         # 3. Run pipeline stages
         try:
             face = stage1_detect(args)
             payload, payload_hash = stage2_search(face, args)
             tx, anchor = stage3_anchor(face, payload, payload_hash, args)
             verification = stage4_verify(payload, payload_hash, tx, anchor, args)
-            
+
             final_score = compute_final_verdict(face, payload)
             if verification.get("hash_match"):
-                generate_proof_certificate(args, face, payload, tx, verification, final_score)
-                
+                generate_proof_certificate(
+                    args, face, payload, tx, verification, final_score
+                )
+
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Pipeline error: {str(e)}")
-            
+
         # 4. Format payload for JSON response
         payload_copy = dict(payload)
-        if "image_bytes" in payload_copy and isinstance(payload_copy["image_bytes"], bytes):
-            payload_copy["image_bytes"] = base64.b64encode(payload_copy["image_bytes"]).decode("utf-8")
-            
+        if "image_bytes" in payload_copy and isinstance(
+            payload_copy["image_bytes"], bytes
+        ):
+            payload_copy["image_bytes"] = base64.b64encode(
+                payload_copy["image_bytes"]
+            ).decode("utf-8")
+
         return {
             "face": face,
             "search": payload_copy,
             "tx": tx,
             "verification": verification,
-            "final_score": final_score
+            "final_score": final_score,
         }
-        
+
     finally:
         # Cleanup uploaded file
         if file_path.exists():
             os.remove(file_path)
 
+
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("api:app", host="0.0.0.0", port=8000, reload=True)

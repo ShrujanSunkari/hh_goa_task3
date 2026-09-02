@@ -1,10 +1,19 @@
-.PHONY: install test lint demo deploy run clean
+.PHONY: install install-prod test lint demo deploy run clean
 
 install:
+	pip install -r requirements.txt -r requirements-dev.txt
+
+install-prod:
 	pip install -r requirements.txt
 
 test:
-	pytest
+	pytest tests/ -v --cov=modules
+
+benchmark:
+	python scripts/benchmark.py --offline-mock --n 20
+
+benchmark-live:
+	python scripts/benchmark.py --live --n 5
 
 lint:
 	flake8 .

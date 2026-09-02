@@ -52,6 +52,7 @@ _DEFAULT_ARTIFACTS = "contracts/IdentityRegistry_artifacts.json"
 #  Main class
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class BlockchainAnchor:
     """
     High-level interface for writing and reading IdentityRegistry records.
@@ -68,21 +69,21 @@ class BlockchainAnchor:
     def __init__(
         self,
         artifacts_path: str = _DEFAULT_ARTIFACTS,
-        rpc_url:        Optional[str] = None,
+        rpc_url: Optional[str] = None,
     ) -> None:
         self._artifacts_path = Path(artifacts_path)
-        self._rpc_override   = rpc_url
-        self._w3             = None   # lazy
-        self._contract       = None   # lazy
+        self._rpc_override = rpc_url
+        self._w3 = None  # lazy
+        self._contract = None  # lazy
 
     @retry(stop=stop_after_attempt(3), wait=wait_random(min=2, max=10))
     def anchor_record(
         self,
-        data_hash:      Union[bytes, str],
-        source_url:     str,
+        data_hash: Union[bytes, str],
+        source_url: str,
         confidence_bps: int,
-        metadata_uri:   str = "",
-        image_path:     Optional[str] = None,
+        metadata_uri: str = "",
+        image_path: Optional[str] = None,
     ) -> Dict:
         """
         Call ``registerRecord`` on the deployed contract and return tx metadata.
@@ -104,16 +105,17 @@ class BlockchainAnchor:
         """
         b32 = _coerce_bytes32(data_hash)
         self._ensure_ready()
-        
+
         if image_path and not metadata_uri:
             metadata_uri = self._upload_to_ipfs(image_path)
 
-        w3       = self._w3
+        w3 = self._w3
         contract = self._contract
         import re as _re
+
         _raw = os.getenv("PRIVATE_KEY", "").strip().lstrip("0x")
         private_key = _raw if _re.fullmatch(r"[0-9a-fA-F]{64}", _raw) else ""
-        
+
         if private_key:
             sender = w3.eth.account.from_key(private_key).address
         else:
@@ -131,33 +133,35 @@ class BlockchainAnchor:
             gas_limit = int(gas_estimate * 1.2)
             console.log(f"[dim]Gas estimate: {gas_estimate} (limit: {gas_limit})[/]")
         except Exception as e:
-            console.log(f"[yellow]Gas estimation failed: {e}. Using fallback 500,000.[/]")
+            console.log(
+                f"[yellow]Gas estimation failed: {e}. Using fallback 500,000.[/]"
+            )
             gas_limit = 500_000
 
         tx_kwargs: Dict = {
-            "gas":      gas_limit,
+            "gas": gas_limit,
             "gasPrice": w3.eth.gas_price,
         }
 
         if private_key:
-            nonce   = w3.eth.get_transaction_count(sender)
+            nonce = w3.eth.get_transaction_count(sender, "pending")
             tx = contract.functions.registerRecord(
                 b32, source_url, confidence_bps, metadata_uri
             ).build_transaction({**tx_kwargs, "from": sender, "nonce": nonce})
-            signed   = w3.eth.account.sign_transaction(tx, private_key)
-            tx_hash  = w3.eth.send_raw_transaction(signed.raw_transaction)
+            signed = w3.eth.account.sign_transaction(tx, private_key)
+            tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
         else:
             tx_hash = contract.functions.registerRecord(
                 b32, source_url, confidence_bps, metadata_uri
             ).transact({**tx_kwargs, "from": sender})
 
-        receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
+        receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=300)
 
         result: Dict = {
-            "tx_hash":      tx_hash.hex(),
+            "tx_hash": tx_hash.hex(),
             "block_number": receipt["blockNumber"],
-            "gas_used":     receipt["gasUsed"],
-            "status":       receipt["status"],
+            "gas_used": receipt["gasUsed"],
+            "status": receipt["status"],
         }
 
         if receipt["status"] == 0:
@@ -177,10 +181,10 @@ class BlockchainAnchor:
     @retry(stop=stop_after_attempt(3), wait=wait_random(min=2, max=10))
     def batch_anchor(
         self,
-        data_hashes:         list[Union[bytes, str]],
-        source_urls:         list[str],
+        data_hashes: list[Union[bytes, str]],
+        source_urls: list[str],
         confidence_bps_list: list[int],
-        metadata_uris:       list[str],
+        metadata_uris: list[str],
     ) -> Dict:
         """
         Call ``batchRegister`` on the deployed contract and return tx metadata.
@@ -188,41 +192,48 @@ class BlockchainAnchor:
         b32_list = [_coerce_bytes32(dh) for dh in data_hashes]
         self._ensure_ready()
 
-        w3       = self._w3
+        w3 = self._w3
         contract = self._contract
         import re as _re
+
         _raw = os.getenv("PRIVATE_KEY", "").strip().lstrip("0x")
         private_key = _raw if _re.fullmatch(r"[0-9a-fA-F]{64}", _raw) else ""
-        
+
         if private_key:
             sender = w3.eth.account.from_key(private_key).address
         else:
             sender = w3.eth.accounts[0]
 
-        console.log(f"[bold cyan]BlockchainAnchor[/] → batch anchoring {len(b32_list)} records")
+        console.log(
+            f"[bold cyan]BlockchainAnchor[/] → batch anchoring {len(b32_list)} records"
+        )
 
         try:
             gas_estimate = contract.functions.batchRegister(
                 b32_list, source_urls, confidence_bps_list, metadata_uris
             ).estimate_gas({"from": sender})
             gas_limit = int(gas_estimate * 1.2)
-            console.log(f"[dim]Batch gas estimate: {gas_estimate} (limit: {gas_limit})[/]")
+            console.log(
+                f"[dim]Batch gas estimate: {gas_estimate} (limit: {gas_limit})[/]"
+            )
         except Exception as e:
-            console.log(f"[yellow]Batch gas estimation failed: {e}. Using fallback 3,000,000.[/]")
+            console.log(
+                f"[yellow]Batch gas estimation failed: {e}. Using fallback 3,000,000.[/]"
+            )
             gas_limit = 3_000_000
 
         tx_kwargs: Dict = {
-            "gas":      gas_limit,
+            "gas": gas_limit,
             "gasPrice": w3.eth.gas_price,
         }
 
         if private_key:
-            nonce   = w3.eth.get_transaction_count(sender)
+            nonce = w3.eth.get_transaction_count(sender, "pending")
             tx = contract.functions.batchRegister(
                 b32_list, source_urls, confidence_bps_list, metadata_uris
             ).build_transaction({**tx_kwargs, "from": sender, "nonce": nonce})
-            signed   = w3.eth.account.sign_transaction(tx, private_key)
-            tx_hash  = w3.eth.send_raw_transaction(signed.raw_transaction)
+            signed = w3.eth.account.sign_transaction(tx, private_key)
+            tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
         else:
             tx_hash = contract.functions.batchRegister(
                 b32_list, source_urls, confidence_bps_list, metadata_uris
@@ -231,16 +242,15 @@ class BlockchainAnchor:
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 
         result: Dict = {
-            "tx_hash":      tx_hash.hex(),
+            "tx_hash": tx_hash.hex(),
             "block_number": receipt["blockNumber"],
-            "gas_used":     receipt["gasUsed"],
-            "status":       receipt["status"],
+            "gas_used": receipt["gasUsed"],
+            "status": receipt["status"],
         }
 
         if receipt["status"] == 0:
             raise RuntimeError(
-                f"Batch transaction reverted.\n"
-                f"tx_hash: {result['tx_hash']}"
+                f"Batch transaction reverted.\n" f"tx_hash: {result['tx_hash']}"
             )
 
         console.log(f"[green]Batch anchor successful, tx_hash:[/] {result['tx_hash']}")
@@ -282,12 +292,12 @@ class BlockchainAnchor:
         )
 
         result: Dict = {
-            "exists":               exists,
-            "source_url":           source_url,
-            "confidence_bps":       confidence_bps,
-            "timestamp":            timestamp,
-            "timestamp_formatted":  ts_fmt,
-            "metadata_uri":         metadata_uri,
+            "exists": exists,
+            "source_url": source_url,
+            "confidence_bps": confidence_bps,
+            "timestamp": timestamp,
+            "timestamp_formatted": ts_fmt,
+            "metadata_uri": metadata_uri,
         }
 
         _print_verify(result, b32.hex())
@@ -306,6 +316,7 @@ class BlockchainAnchor:
 
         console.log(f"[cyan]Uploading {image_path} to IPFS via Pinata...[/]")
         import requests
+
         headers = {
             "pinata_api_key": api_key,
             "pinata_secret_api_key": secret,
@@ -316,7 +327,7 @@ class BlockchainAnchor:
                     "https://api.pinata.cloud/pinning/pinFileToIPFS",
                     files={"file": f},
                     headers=headers,
-                    timeout=15
+                    timeout=15,
                 )
             if response.status_code == 200:
                 cid = response.json().get("IpfsHash")
@@ -356,6 +367,7 @@ class BlockchainAnchor:
 #  Private: Web3 / contract helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _build_w3(rpc_override: Optional[str]) -> object:
     """Return a connected Web3 instance."""
     from web3 import Web3
@@ -375,9 +387,7 @@ def _build_w3(rpc_override: Optional[str]) -> object:
                 "(zero-cost demo mode)"
             )
         except ImportError:
-            console.log(
-                "[yellow]eth-tester not installed — trying localhost:8545[/]"
-            )
+            console.log("[yellow]eth-tester not installed — trying localhost:8545[/]")
             w3 = Web3(Web3.HTTPProvider("http://127.0.0.1:8545"))
     else:
         w3 = Web3(Web3.HTTPProvider(uri))
@@ -413,15 +423,16 @@ def _load_contract(w3: object, artifacts_path: Path) -> object:
         )
 
     artifact = json.loads(artifacts_path.read_text(encoding="utf-8"))
-    abi      = artifact["abi"]
+    abi = artifact["abi"]
     bytecode = artifact.get("bytecode", "")
-    address  = artifact.get("deployed_address") or os.getenv("CONTRACT_ADDRESS", "")
+    address = artifact.get("deployed_address") or os.getenv("CONTRACT_ADDRESS", "")
 
     # ── Auto-deploy on fresh in-process evm:// chain ──────────────────────────
     # py-evm starts at block 0.  The address saved by deploy.py points to a
     # *different* ephemeral chain that no longer exists, so we must re-deploy.
-    is_fresh_evm = (w3.eth.block_number == 0 and
-                    w3.eth.chain_id == 131277322940537)  # py-evm default chain ID
+    is_fresh_evm = (
+        w3.eth.block_number == 0 and w3.eth.chain_id == 131277322940537
+    )  # py-evm default chain ID
 
     if is_fresh_evm and bytecode:
         console.log(
@@ -429,12 +440,10 @@ def _load_contract(w3: object, artifacts_path: Path) -> object:
         )
         deployer = w3.eth.accounts[0]
         Contract = w3.eth.contract(abi=abi, bytecode=bytecode)
-        tx_hash  = Contract.constructor().transact({"from": deployer, "gas": 3_000_000})
-        receipt  = w3.eth.wait_for_transaction_receipt(tx_hash)
-        address  = receipt["contractAddress"]
-        console.log(
-            f"[green]Auto-deployed[/] IdentityRegistry @ [cyan]{address}[/]"
-        )
+        tx_hash = Contract.constructor().transact({"from": deployer, "gas": 3_000_000})
+        receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
+        address = receipt["contractAddress"]
+        console.log(f"[green]Auto-deployed[/] IdentityRegistry @ [cyan]{address}[/]")
 
     if not address:
         raise EnvironmentError(
@@ -444,20 +453,15 @@ def _load_contract(w3: object, artifacts_path: Path) -> object:
 
     checksum = w3.to_checksum_address(address)
     contract = w3.eth.contract(address=checksum, abi=abi)
-    console.log(
-        f"[green]Contract loaded[/]  IdentityRegistry @ [cyan]{checksum}[/]"
-    )
+    console.log(f"[green]Contract loaded[/]  IdentityRegistry @ [cyan]{checksum}[/]")
     return contract
-
 
 
 def _coerce_bytes32(value: Union[bytes, str]) -> bytes:
     """Normalise input to a 32-byte ``bytes`` object."""
     if isinstance(value, bytes):
         if len(value) != 32:
-            raise ValueError(
-                f"data_hash must be exactly 32 bytes, got {len(value)}."
-            )
+            raise ValueError(f"data_hash must be exactly 32 bytes, got {len(value)}.")
         return value
 
     if isinstance(value, str):
@@ -476,42 +480,43 @@ def _coerce_bytes32(value: Union[bytes, str]) -> bytes:
 #  Private: rich output helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _print_anchor(
     result: Dict, hash_hex: str, source_url: str, confidence_bps: int
 ) -> None:
     """Print the result of an anchor transaction."""
     tbl = Table(show_header=False, box=None, padding=(0, 2))
-    tbl.add_column("Key",   style="bold white", no_wrap=True)
+    tbl.add_column("Key", style="bold white", no_wrap=True)
     tbl.add_column("Value", style="cyan")
 
-    tbl.add_row("Payload hash",  hash_hex[:16] + "…")
-    tbl.add_row("Source URL",    source_url or "—")
-    tbl.add_row("Confidence",    f"{confidence_bps} bps ({confidence_bps/100:.1f}%)")
-    tbl.add_row("TX hash",       result["tx_hash"][:20] + "…")
-    tbl.add_row("Block number",  str(result["block_number"]))
-    tbl.add_row("Gas used",      f"{result['gas_used']:,}")
-    tbl.add_row("Status",        "✅ Success" if result["status"] == 1 else "❌ Reverted")
+    tbl.add_row("Payload hash", hash_hex[:16] + "…")
+    tbl.add_row("Source URL", source_url or "—")
+    tbl.add_row("Confidence", f"{confidence_bps} bps ({confidence_bps/100:.1f}%)")
+    tbl.add_row("TX hash", result["tx_hash"][:20] + "…")
+    tbl.add_row("Block number", str(result["block_number"]))
+    tbl.add_row("Gas used", f"{result['gas_used']:,}")
+    tbl.add_row("Status", "✅ Success" if result["status"] == 1 else "❌ Reverted")
 
-    console.print(
-        Panel(tbl, title="⛓  Record Anchored On-Chain", border_style="green")
-    )
+    console.print(Panel(tbl, title="⛓  Record Anchored On-Chain", border_style="green"))
 
 
 def _print_verify(result: Dict, hash_hex: str) -> None:
     """Print the result of a verify call."""
     border = "green" if result["exists"] else "yellow"
-    icon   = "✅" if result["exists"] else "❌"
+    icon = "✅" if result["exists"] else "❌"
 
     tbl = Table(show_header=False, box=None, padding=(0, 2))
-    tbl.add_column("Key",   style="bold white", no_wrap=True)
+    tbl.add_column("Key", style="bold white", no_wrap=True)
     tbl.add_column("Value", style="cyan")
 
-    tbl.add_row("Hash",       hash_hex[:16] + "…")
-    tbl.add_row("Exists",     str(result["exists"]))
+    tbl.add_row("Hash", hash_hex[:16] + "…")
+    tbl.add_row("Exists", str(result["exists"]))
     tbl.add_row("Source URL", result["source_url"] or "—")
-    tbl.add_row("Confidence", f"{result['confidence_bps']} bps "
-                              f"({result['confidence_bps']/100:.1f}%)")
-    tbl.add_row("Timestamp",  result["timestamp_formatted"])
+    tbl.add_row(
+        "Confidence",
+        f"{result['confidence_bps']} bps " f"({result['confidence_bps']/100:.1f}%)",
+    )
+    tbl.add_row("Timestamp", result["timestamp_formatted"])
 
     console.print(
         Panel(
@@ -528,6 +533,7 @@ def _print_verify(result: Dict, hash_hex: str) -> None:
 
 if __name__ == "__main__":
     from dotenv import load_dotenv
+
     load_dotenv()
 
     console.rule("[bold blue]BlockchainAnchor — Smoke Test")
@@ -551,43 +557,49 @@ if __name__ == "__main__":
     w3 = build_w3()
 
     from web3 import Web3
+
     Contract = w3.eth.contract(abi=abi, bytecode=bytecode)
-    tx_hash  = Contract.constructor().transact({"from": w3.eth.accounts[0], "gas": 3_000_000})
-    receipt  = w3.eth.wait_for_transaction_receipt(tx_hash)
-    address  = receipt["contractAddress"]
+    tx_hash = Contract.constructor().transact(
+        {"from": w3.eth.accounts[0], "gas": 3_000_000}
+    )
+    receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
+    address = receipt["contractAddress"]
 
     # Persist so BlockchainAnchor can load it
     import json as _json
+
     artifact_path = Path("contracts/IdentityRegistry_artifacts.json")
     artifact_path.parent.mkdir(parents=True, exist_ok=True)
     artifact_path.write_text(
-        _json.dumps({"abi": abi, "bytecode": "0x" + bytecode, "deployed_address": address}, indent=2),
+        _json.dumps(
+            {"abi": abi, "bytecode": "0x" + bytecode, "deployed_address": address},
+            indent=2,
+        ),
         encoding="utf-8",
     )
     console.log(f"[green]Smoke-test contract deployed @ {address}[/]")
 
     # ── 2. Build a dummy 32-byte hash ─────────────────────────────────────────
     import hashlib
+
     test_hash: bytes = hashlib.sha256(b"smoke-test-payload").digest()
-    test_url  = "https://linkedin.com/in/smoke-test"
-    test_bps  = 9_500
+    test_url = "https://linkedin.com/in/smoke-test"
+    test_bps = 9_500
 
     # ── 3. Anchor ─────────────────────────────────────────────────────────────
     # Use the same w3 + contract by monkey-patching via artifacts file
     anchor = BlockchainAnchor(artifacts_path=str(artifact_path))
     # Directly inject the already-connected w3 to avoid reconnect
-    anchor._w3       = w3
-    anchor._contract = w3.eth.contract(
-        address=w3.to_checksum_address(address), abi=abi
-    )
+    anchor._w3 = w3
+    anchor._contract = w3.eth.contract(address=w3.to_checksum_address(address), abi=abi)
 
     result = anchor.anchor_record(test_hash, test_url, test_bps)
     assert result["status"] == 1, "anchor_record should succeed"
 
     # ── 4. Verify ─────────────────────────────────────────────────────────────
     verification = anchor.verify_record(test_hash)
-    assert verification["exists"],                   "record should exist"
-    assert verification["source_url"] == test_url,   "source_url mismatch"
+    assert verification["exists"], "record should exist"
+    assert verification["source_url"] == test_url, "source_url mismatch"
     assert verification["confidence_bps"] == test_bps, "confidence_bps mismatch"
 
     # ── 5. Duplicate rejection test ───────────────────────────────────────────

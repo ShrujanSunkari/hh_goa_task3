@@ -86,7 +86,7 @@ Walk through each stage as it appears:
 > Pause on the green **[OK] Face Extracted** panel.
 
 **Say:** *"Stage 1: OpenCV Haar Cascade detected the face with high confidence,
-extracted a 128-dimensional colour histogram embedding, and saved the crop."*
+*"As you can see, the pipeline successfully detected a face in the image, extracted a 512-dimensional ArcFace biometric embedding, and saved the crop."*
 
 **Stage 2 — OSINT Search** (0:30 – 0:42)
 

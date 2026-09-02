@@ -1,31 +1,53 @@
 # ── Core Vision ──────────────────────────────────────────────────────────────
-opencv-python-headless<5       # Haar cascade face detection — OpenCV 5 removed CascadeClassifier
-tensorflow-cpu                 # optional: enables RetinaFace model for better face detection
-numpy                          # array ops for histogram embedding
-fastapi>=0.110.0
-uvicorn>=0.27.0
-python-multipart>=0.0.9
+opencv-python-headless==4.9.0.80
+tensorflow-cpu==2.15.0
+deepface==0.0.84
+numpy==1.26.4
+fastapi==0.110.0
+uvicorn==0.27.1
+python-multipart==0.0.9
 
 # ── Web / OSINT Search ───────────────────────────────────────────────────────
-google-search-results          # SerpAPI client (Google Lens reverse image search)
-requests                       # HTTP for thumbnail download
+google-search-results==2.4.2
+requests==2.31.0
 
 # ── Blockchain ───────────────────────────────────────────────────────────────
-web3                           # Ethereum Web3.py
-eth-tester                     # in-process EVM testing provider
-py-evm                         # zero-cost local EVM for demo
+web3==6.15.1
+eth-tester==0.10.0b1
+py-evm==0.8.0b1
 
 # ── CLI / UX ─────────────────────────────────────────────────────────────────
-rich                           # terminal panels, spinners, tables
+rich==13.7.1
 
 # ── Config / Utils ───────────────────────────────────────────────────────────
-python-dotenv                  # .env file loading
-Pillow                         # image utility (optional, used by some cv2 ops)
-tenacity                       # retry decorators
+python-dotenv==1.0.1
+Pillow==10.2.0
+tenacity==8.2.3
 
-# ── Testing / Formatting ─────────────────────────────────────────────────────
-pytest                         # testing framework
-pytest-cov                     # test coverage
-pytest-mock                    # mocker fixture
-flake8                         # code linter
-black                          # code formatter
+# ── Transitive Dependencies (Production) ─────────────────────────────────────
+certifi==2024.2.2
+charset-normalizer==3.3.2
+idna==3.6
+urllib3==2.2.1
+pydantic==2.6.3
+pydantic_core==2.16.3
+typing_extensions==4.10.0
+sniffio==1.3.1
+anyio==4.3.0
+starlette==0.36.3
+h11==0.14.0
+click==8.1.7
+colorama==0.4.6
+eth-abi==4.2.1
+eth-account==0.11.0
+eth-hash==0.7.0
+eth-keyfile==0.6.1
+eth-keys==0.4.0
+eth-rlp==0.3.0
+eth-typing==3.5.2
+eth-utils==2.3.1
+hexbytes==0.3.1
+lru-dict==1.3.0
+pycryptodome==3.20.0
+rlp==3.0.0
+websockets==12.0

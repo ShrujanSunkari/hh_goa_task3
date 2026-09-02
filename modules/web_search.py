@@ -86,7 +86,7 @@ _JUNK_DOMAINS: List[str] = [
 ]
 
 _SERPAPI_ENDPOINT = "https://serpapi.com/search"
-_DOWNLOAD_TIMEOUT = 10   # seconds
+_DOWNLOAD_TIMEOUT = 10  # seconds
 
 _search_cache: Dict[str, Dict] = {}
 
@@ -95,14 +95,15 @@ _search_cache: Dict[str, Dict] = {}
 #  Internal dataclass (used for scoring and sorting)
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @dataclass
 class _Match:
-    title:          str
-    source_url:     str
-    domain:         str
-    thumbnail_url:  str
-    rank:           int    # original rank from SerpAPI (0-based)
-    confidence_bps: int    # final calculated score (0-10000)
+    title: str
+    source_url: str
+    domain: str
+    thumbnail_url: str
+    rank: int  # original rank from SerpAPI (0-based)
+    confidence_bps: int  # final calculated score (0-10000)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -169,8 +170,7 @@ class WebSearchEngine:
             return _search_cache[img_hash]
 
         console.log(
-            f"[bold cyan]WebSearchEngine[/] → Searching on "
-            f"[yellow]{image_path}[/]"
+            f"[bold cyan]WebSearchEngine[/] → Searching on " f"[yellow]{image_path}[/]"
         )
 
         def _run_searches(search_img: str) -> tuple[List[_Match], int]:
@@ -179,26 +179,33 @@ class WebSearchEngine:
             try:
                 self._require_key()
                 raw_response = self._call_serpapi(search_img)
-                raw_serp  = raw_response.get("visual_matches", [])
+                raw_serp = raw_response.get("visual_matches", [])
             except (EnvironmentError, RuntimeError) as e:
                 console.log(f"[yellow]SerpAPI encountered an error: {e}[/]")
 
             # 2. Bing
             raw_bing = self._bing_search(search_img)
-            
+
             # 3. Yandex
             raw_yandex = self._yandex_search(search_img)
-            
-            engines_matched = sum(1 for eng_res in (raw_serp, raw_bing, raw_yandex) if eng_res)
-            return _merge_and_deduplicate([raw_serp, raw_bing, raw_yandex]), engines_matched
+
+            engines_matched = sum(
+                1 for eng_res in (raw_serp, raw_bing, raw_yandex) if eng_res
+            )
+            return (
+                _merge_and_deduplicate([raw_serp, raw_bing, raw_yandex]),
+                engines_matched,
+            )
 
         # Enhance the crop first
         enhanced_img = self._enhance_image(img_path)
         scored, num_engines = _run_searches(enhanced_img)
-        
+
         # Fallback to full image if no matches
         if not scored and original_image_path:
-            console.log("[INFO] No matches with face crop. Retrying with full image for better context...")
+            console.log(
+                "[INFO] No matches with face crop. Retrying with full image for better context..."
+            )
             orig_img_path = self._validate_image(original_image_path)
             enhanced_orig = self._enhance_image(orig_img_path)
             scored, num_engines = _run_searches(enhanced_orig)
@@ -224,20 +231,20 @@ class WebSearchEngine:
                 "title": m.title,
                 "link": m.source_url,
                 "domain": m.domain,
-                "thumbnail": m.thumbnail_url
+                "thumbnail": m.thumbnail_url,
             }
             for m in scored[:top_n]
         ]
-        
+
         payload: Dict = {
-            "title":          best.title,
-            "source_url":     best.source_url,
-            "domain":         best.domain,
-            "thumbnail_url":  best.thumbnail_url,
-            "image_bytes":    image_bytes,
+            "title": best.title,
+            "source_url": best.source_url,
+            "domain": best.domain,
+            "thumbnail_url": best.thumbnail_url,
+            "image_bytes": image_bytes,
             "confidence_bps": best.confidence_bps,
             "num_engines_matched": num_engines,
-            "raw_matches":    raw_matches,
+            "raw_matches": raw_matches,
         }
 
         _print_result(payload, scored[:top_n])
@@ -250,9 +257,9 @@ class WebSearchEngine:
 
     @staticmethod
     def generate_payload_hash(
-        source_url:  str,
+        source_url: str,
         image_bytes: bytes,
-        metadata:    Optional[Dict] = None,
+        metadata: Optional[Dict] = None,
     ) -> Dict:
         """
         Compute a deterministic SHA-256 fingerprint of the OSINT payload.
@@ -279,9 +286,10 @@ class WebSearchEngine:
 
         if metadata:
             import json as _json
+
             h.update(_json.dumps(metadata, sort_keys=True).encode("utf-8"))
 
-        digest: bytes = h.digest()        # 32 bytes
+        digest: bytes = h.digest()  # 32 bytes
         hex_str = "0x" + digest.hex()
 
         console.log(
@@ -304,6 +312,7 @@ class WebSearchEngine:
     @staticmethod
     def _validate_image(image_path: str) -> str:
         from pathlib import Path
+
         p = Path(image_path)
         if not p.exists():
             raise FileNotFoundError(
@@ -327,38 +336,51 @@ class WebSearchEngine:
 
         # Step 2: call SerpAPI Google Lens with url param (GET)
         params = {
-            "engine":  "google_lens",
+            "engine": "google_lens",
             "api_key": self._api_key,
-            "url":     public_url,
-            "hl":      "en",
+            "url": public_url,
+            "hl": "en",
         }
         from tenacity import retry, stop_after_attempt, wait_exponential
-        
-        @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+
+        @retry(
+            stop=stop_after_attempt(3),
+            wait=wait_exponential(multiplier=1, min=2, max=10),
+        )
         def _get_with_retry():
             return requests.get(_SERPAPI_ENDPOINT, params=params, timeout=30)
-            
+
         try:
             resp = _get_with_retry()
-            
+
             if resp.status_code == 429:
-                console.log("[yellow]SerpAPI rate limit exceeded. Falling back to other engines...[/]")
+                console.log(
+                    "[yellow]SerpAPI rate limit exceeded. Falling back to other engines...[/]"
+                )
                 return {}
             if resp.status_code in (401, 403):
-                console.log(f"[yellow]SerpAPI key rejected (HTTP {resp.status_code}). Falling back...[/]")
+                console.log(
+                    f"[yellow]SerpAPI key rejected (HTTP {resp.status_code}). Falling back...[/]"
+                )
                 return {}
             if not resp.ok:
-                console.log(f"[yellow]SerpAPI returned HTTP {resp.status_code}. Falling back...[/]")
+                console.log(
+                    f"[yellow]SerpAPI returned HTTP {resp.status_code}. Falling back...[/]"
+                )
                 return {}
-                
+
             data = resp.json()
             if "error" in data:
-                console.log(f"[yellow]SerpAPI error: {data['error']}. Falling back...[/]")
+                console.log(
+                    f"[yellow]SerpAPI error: {data['error']}. Falling back...[/]"
+                )
                 return {}
             return data
-            
+
         except Exception as exc:
-            console.log(f"[yellow]SerpAPI request failed after retries: {exc}. Falling back to other engines...[/]")
+            console.log(
+                f"[yellow]SerpAPI request failed after retries: {exc}. Falling back to other engines...[/]"
+            )
             return {}
 
     @staticmethod
@@ -412,7 +434,7 @@ class WebSearchEngine:
     def _bing_search(self, image_path: str) -> List[Dict]:
         """
         Fallback search using Bing Visual Search API.
-        Returns a list of dicts with 'title', 'link', 'thumbnail' keys 
+        Returns a list of dicts with 'title', 'link', 'thumbnail' keys
         similar to SerpAPI visual_matches.
         """
         bing_key = os.getenv("BING_API_KEY", "")
@@ -427,84 +449,92 @@ class WebSearchEngine:
         try:
             with open(image_path, "rb") as fh:
                 file_dict = {"image": ("image.jpg", fh, "image/jpeg")}
-                resp = requests.post(endpoint, headers=headers, files=file_dict, timeout=30)
-            
+                resp = requests.post(
+                    endpoint, headers=headers, files=file_dict, timeout=30
+                )
+
             resp.raise_for_status()
             data = resp.json()
-            
+
             raw_matches = []
             for tag in data.get("tags", []):
                 for action in tag.get("actions", []):
                     if action.get("actionType") == "PagesIncluding":
                         for item in action.get("data", {}).get("value", []):
-                            raw_matches.append({
-                                "title": item.get("name", "Untitled"),
-                                "link": item.get("hostPageUrl", ""),
-                                "thumbnail": item.get("thumbnailUrl", "")
-                            })
+                            raw_matches.append(
+                                {
+                                    "title": item.get("name", "Untitled"),
+                                    "link": item.get("hostPageUrl", ""),
+                                    "thumbnail": item.get("thumbnailUrl", ""),
+                                }
+                            )
             return raw_matches
 
         except Exception as exc:
             console.log(f"[yellow]Bing search failed: {exc}[/]")
             return []
 
-
     def _yandex_search(self, image_path: str) -> List[Dict]:
         """
         Fallback search using Yandex Reverse Image Search API via HTML parsing.
         """
         endpoint = "https://yandex.com/images/search?rpt=imageview"
-        
+
         console.log("[dim]Uploading face crop to Yandex Image Search...[/]")
         try:
             with open(image_path, "rb") as fh:
-                files = {'upfile': ('image.jpg', fh, 'image/jpeg')}
+                files = {"upfile": ("image.jpg", fh, "image/jpeg")}
                 resp = requests.post(endpoint, files=files, timeout=30)
-            
+
             resp.raise_for_status()
-            
+
             raw_matches = []
             import json
             import re
-            
+
             # Yandex embeds JSON state in the HTML
             # Look for the state object
             match = re.search(r'data-state="([^"]+)"', resp.text)
             if match:
                 import html
+
                 state_json_str = html.unescape(match.group(1))
                 try:
                     state = json.loads(state_json_str)
-                    
+
                     # Dig through Yandex's insane JSON structure
                     # This is highly volatile and might break, but we'll try our best
                     if "cbirPage" in state and "similar" in state["cbirPage"]:
                         for item in state["cbirPage"]["similar"].get("items", []):
-                            raw_matches.append({
-                                "title": item.get("title", "Untitled"),
-                                "link": item.get("url", ""),
-                                "thumbnail": item.get("thumb", {}).get("url", "")
-                            })
+                            raw_matches.append(
+                                {
+                                    "title": item.get("title", "Untitled"),
+                                    "link": item.get("url", ""),
+                                    "thumbnail": item.get("thumb", {}).get("url", ""),
+                                }
+                            )
                 except json.JSONDecodeError:
                     pass
-                    
+
             if not raw_matches:
                 # Fallback to simple regex if state object approach fails
                 # Look for typical Yandex result structures
                 urls = re.findall(r'"url":"([^"]+)"', resp.text)
                 titles = re.findall(r'"title":"([^"]+)"', resp.text)
                 thumbs = re.findall(r'"thumb":{"url":"([^"]+)"', resp.text)
-                
+
                 # Make sure we have some results
                 for i in range(min(len(urls), 20)):
                     # Filter out obvious non-result URLs
                     if "yandex" not in urls[i] and urls[i].startswith("http"):
-                        raw_matches.append({
-                            "title": titles[i] if i < len(titles) else "Untitled",
-                            "link": urls[i],
-                            "thumbnail": thumbs[i] if i < len(thumbs) else ""
-                        })
-            
+                        raw_matches.append(
+                            {
+                                "title": titles[i] if i < len(titles) else "Untitled",
+                                "link": urls[i],
+                                "thumbnail": thumbs[i] if i < len(thumbs) else "",
+                            }
+                        )
+
             # Simple deduplication just in case regex went wild
             seen = set()
             unique_matches = []
@@ -514,7 +544,7 @@ class WebSearchEngine:
                     unique_matches.append(m)
 
             return unique_matches
-            
+
         except Exception as exc:
             console.log(f"[yellow]Yandex search failed: {exc}[/]")
             return []
@@ -525,20 +555,22 @@ class WebSearchEngine:
         Returns path to enhanced image.
         """
         console.log(f"[dim]Enhancing image for search: {image_path}[/]")
-        
+
         try:
             img = cv2.imread(image_path)
             if img is None:
-                console.log("[yellow]Failed to read image for enhancement. Using original.[/]")
+                console.log(
+                    "[yellow]Failed to read image for enhancement. Using original.[/]"
+                )
                 return image_path
-                
+
             # 1. Sharpening
             kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
             img = cv2.filter2D(img, -1, kernel)
-            
+
             # 2. Contrast enhancement (convertScaleAbs)
             img = cv2.convertScaleAbs(img, alpha=1.2, beta=30)
-            
+
             # 3. Upscale to at least 800px on shortest side
             h, w = img.shape[:2]
             shortest_side = min(h, w)
@@ -547,21 +579,21 @@ class WebSearchEngine:
                 new_w = int(w * scale)
                 new_h = int(h * scale)
                 img = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_LANCZOS4)
-                
+
             # Save enhanced image
             out_path = "inputs/enhanced_crop.jpg"
             cv2.imwrite(out_path, img)
             return out_path
-            
+
         except Exception as exc:
             console.log(f"[yellow]Image enhancement failed: {exc}. Using original.[/]")
             return image_path
 
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 #  Module-level utilities
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _merge_and_deduplicate(results_lists: List[List[Dict]]) -> List[_Match]:
     """
@@ -577,18 +609,18 @@ def _merge_and_deduplicate(results_lists: List[List[Dict]]) -> List[_Match]:
     """
     scored: List[_Match] = []
     seen = set()
-    
+
     for engine_idx, raw_matches in enumerate(results_lists):
         for rank, item in enumerate(raw_matches):
-            url    = item.get("link", "")
+            url = item.get("link", "")
             domain = _extract_domain(url)
-            title  = item.get("title", "Untitled")
-            
+            title = item.get("title", "Untitled")
+
             # Deduplicate
             dedup_key = f"{domain}:{title[:20].lower()}"
             if url in seen or dedup_key in seen:
                 continue
-                
+
             if url:
                 seen.add(url)
             seen.add(dedup_key)
@@ -614,7 +646,8 @@ def _merge_and_deduplicate(results_lists: List[List[Dict]]) -> List[_Match]:
                     title=title,
                     source_url=url,
                     domain=domain,
-                    thumbnail_url=item.get("thumbnail", "") or item.get("thumbnailUrl", ""),
+                    thumbnail_url=item.get("thumbnail", "")
+                    or item.get("thumbnailUrl", ""),
                     rank=rank,
                     confidence_bps=confidence_bps,
                 )
@@ -635,7 +668,6 @@ def _extract_domain(url: str) -> str:
         return ""
 
 
-
 def _download_bytes(url: str) -> bytes:
     """Download *url* into memory.  Returns empty bytes on failure."""
     if not url:
@@ -652,31 +684,33 @@ def _download_bytes(url: str) -> bytes:
 def _empty_payload() -> Dict:
     """Return an empty payload schema."""
     return {
-        "title":          "",
-        "source_url":     "",
-        "domain":         "",
-        "thumbnail_url":  "",
-        "image_bytes":    b"",
+        "title": "",
+        "source_url": "",
+        "domain": "",
+        "thumbnail_url": "",
+        "image_bytes": b"",
         "confidence_bps": 0,
-        "raw_matches":    [],
+        "raw_matches": [],
     }
 
 
 def _warn(message: str) -> None:
     """Print a warning panel."""
     console.print(
-        Panel(f"[bold yellow]{message}[/]", title="⚠  No Matches", border_style="yellow")
+        Panel(
+            f"[bold yellow]{message}[/]", title="⚠  No Matches", border_style="yellow"
+        )
     )
 
 
 def _print_result(payload: Dict, top_matches: List[_Match]) -> None:
     """Print the final search results panel."""
     tbl = Table(title="🔍 Google Lens — OSINT Results", show_lines=True)
-    tbl.add_column("#",          style="dim",         width=4)
-    tbl.add_column("Domain",     style="bold cyan",   width=20)
-    tbl.add_column("Title",      style="white",       max_width=40)
-    tbl.add_column("Conf (bps)", style="green",       justify="right", width=12)
-    tbl.add_column("URL",        style="dim",         max_width=50)
+    tbl.add_column("#", style="dim", width=4)
+    tbl.add_column("Domain", style="bold cyan", width=20)
+    tbl.add_column("Title", style="white", max_width=40)
+    tbl.add_column("Conf (bps)", style="green", justify="right", width=12)
+    tbl.add_column("URL", style="dim", max_width=50)
 
     for i, m in enumerate(top_matches, 1):
         marker = "⭐ " if i == 1 else ""
@@ -710,6 +744,7 @@ def _print_result(payload: Dict, top_matches: List[_Match]) -> None:
 
 if __name__ == "__main__":
     from dotenv import load_dotenv
+
     load_dotenv()
 
     if len(sys.argv) < 2:
@@ -718,11 +753,11 @@ if __name__ == "__main__":
         )
         sys.exit(1)
 
-    img   = sys.argv[1]
+    img = sys.argv[1]
     top_n = int(sys.argv[2]) if len(sys.argv) > 2 else 5
 
     console.rule("[bold blue]WebSearchEngine — Smoke Test")
-    engine  = WebSearchEngine()
+    engine = WebSearchEngine()
     payload = engine.search_by_image(img, top_n=top_n)
 
     if payload["source_url"]:

@@ -49,17 +49,18 @@ load_dotenv()
 console = Console(highlight=False)
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
-ROOT          = Path(__file__).parent
-SOL_FILE      = ROOT / "contracts" / "IdentityRegistry.sol"
+ROOT = Path(__file__).parent
+SOL_FILE = ROOT / "contracts" / "IdentityRegistry.sol"
 ARTIFACT_FILE = ROOT / "contracts" / "IdentityRegistry_artifacts.json"
-ENV_FILE      = ROOT / ".env"
+ENV_FILE = ROOT / ".env"
 
-SOLC_VERSION  = "0.8.24"
+SOLC_VERSION = "0.8.24"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  1. Compiler bootstrap
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def bootstrap_solc() -> None:
     """Auto-install py-solc-x + solc binary if not already present."""
@@ -68,7 +69,10 @@ def bootstrap_solc() -> None:
     except ImportError:
         console.log("[yellow]py-solc-x not found — installing …[/]")
         import subprocess, sys
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "py-solc-x"])
+
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "install", "-q", "py-solc-x"]
+        )
         import solcx  # noqa: F811 — re-import after install
 
     installed = solcx.get_installed_solc_versions()
@@ -87,6 +91,7 @@ def bootstrap_solc() -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 #  2. Compilation
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def compile_contract() -> tuple[list, str]:
     """
@@ -111,7 +116,7 @@ def compile_contract() -> tuple[list, str]:
     # The compiled dict key looks like "contracts/IdentityRegistry.sol:IdentityRegistry" or absolute path
     contract_key = next(k for k in compiled if "IdentityRegistry" in k)
     interface = compiled[contract_key]
-    abi      = interface["abi"]
+    abi = interface["abi"]
     bytecode = interface["bin"]
 
     console.log(
@@ -125,6 +130,7 @@ def compile_contract() -> tuple[list, str]:
 # ─────────────────────────────────────────────────────────────────────────────
 #  3. Web3 provider
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def build_w3(network: str) -> object:
     """
@@ -152,7 +158,9 @@ def build_w3(network: str) -> object:
             tester = EthereumTester(PyEVMBackend())
             w3 = Web3(Web3.EthereumTesterProvider(tester))
             w3.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
-            console.log("[green]Provider[/] → in-process [bold]py-evm[/] (zero-cost demo mode)")
+            console.log(
+                "[green]Provider[/] → in-process [bold]py-evm[/] (zero-cost demo mode)"
+            )
         except ImportError:
             console.log(
                 "[yellow]eth-tester / py-evm not installed. "
@@ -181,6 +189,7 @@ def build_w3(network: str) -> object:
 #  4. Deployment
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def deploy_contract(w3: object, abi: list, bytecode: str) -> dict:
     """
     Deploy IdentityRegistry and return a result dict with address + gas info.
@@ -190,6 +199,7 @@ def deploy_contract(w3: object, abi: list, bytecode: str) -> dict:
     raw_key = os.getenv("PRIVATE_KEY", "").strip().lstrip("0x")
     # Only use PRIVATE_KEY if it looks like a real 64-char hex string
     import re as _re
+
     private_key = raw_key if (_re.fullmatch(r"[0-9a-fA-F]{64}", raw_key)) else ""
 
     if private_key:
@@ -203,12 +213,11 @@ def deploy_contract(w3: object, abi: list, bytecode: str) -> dict:
             f"[bold]{deployer}[/][/]"
         )
 
-
     Contract = w3.eth.contract(abi=abi, bytecode=bytecode)
     tx_kwargs: dict = {
-        "from":     deployer,
-        "gas":      1_500_000,
-        "gasPrice": w3.eth.gas_price,
+        "from": deployer,
+        "gas": 3000000,
+        "gasPrice": int(w3.eth.gas_price * 1.5),
     }
 
     t0 = time.perf_counter()
@@ -220,21 +229,20 @@ def deploy_contract(w3: object, abi: list, bytecode: str) -> dict:
         tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
     else:
         tx_hash = Contract.constructor().transact(tx_kwargs)
-
-    receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
+    receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=300)
     elapsed = time.perf_counter() - t0
 
-    address   = receipt["contractAddress"]
-    gas_used  = receipt["gasUsed"]
+    address = receipt["contractAddress"]
+    gas_used = receipt["gasUsed"]
     block_num = receipt["blockNumber"]
-    tx_hex    = tx_hash.hex()
+    tx_hex = tx_hash.hex()
 
     return {
         "deployed_address": address,
-        "tx_hash":          tx_hex,
-        "gas_used":         gas_used,
-        "block_number":     block_num,
-        "elapsed_ms":       round(elapsed * 1000, 1),
+        "tx_hash": tx_hex,
+        "gas_used": gas_used,
+        "block_number": block_num,
+        "elapsed_ms": round(elapsed * 1000, 1),
     }
 
 
@@ -242,11 +250,12 @@ def deploy_contract(w3: object, abi: list, bytecode: str) -> dict:
 #  5. Persist artifact
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def persist_artifact(abi: list, bytecode: str, deploy_result: dict) -> None:
     """Write contracts/IdentityRegistry_artifacts.json."""
     artifact = {
-        "abi":              abi,
-        "bytecode":         "0x" + bytecode,
+        "abi": abi,
+        "bytecode": "0x" + bytecode,
         "deployed_address": deploy_result["deployed_address"],
     }
     ARTIFACT_FILE.write_text(json.dumps(artifact, indent=2), encoding="utf-8")
@@ -265,31 +274,37 @@ def persist_artifact(abi: list, bytecode: str, deploy_result: dict) -> None:
 #  7. CLI summary
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def print_summary(deploy_result: dict) -> None:
     """Print the final deployment summary table."""
     tbl = Table(show_header=False, box=None, padding=(0, 2))
-    tbl.add_column("Key",   style="bold white", no_wrap=True)
+    tbl.add_column("Key", style="bold white", no_wrap=True)
     tbl.add_column("Value", style="cyan")
 
     rows = [
         ("Contract Address", deploy_result["deployed_address"]),
         ("Transaction Hash", deploy_result["tx_hash"]),
-        ("Block Number",     str(deploy_result["block_number"])),
-        ("Gas Used",         f"{deploy_result['gas_used']:,}"),
-        ("Elapsed",          f"{deploy_result['elapsed_ms']} ms"),
-        ("Artifact",         str(ARTIFACT_FILE)),
+        ("Block Number", str(deploy_result["block_number"])),
+        ("Gas Used", f"{deploy_result['gas_used']:,}"),
+        ("Elapsed", f"{deploy_result['elapsed_ms']} ms"),
+        ("Artifact", str(ARTIFACT_FILE)),
     ]
     for k, v in rows:
         tbl.add_row(k, v)
 
     console.print(
-        Panel(tbl, title="[bold green] [>>] IdentityRegistry -- Deployed Successfully", border_style="green")
+        Panel(
+            tbl,
+            title="[bold green] [>>] IdentityRegistry -- Deployed Successfully",
+            border_style="green",
+        )
     )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  8. Entry-point
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Deploy IdentityRegistry.sol")
@@ -309,7 +324,7 @@ def main() -> None:
 
     bootstrap_solc()
     abi, bytecode = compile_contract()
-    w3            = build_w3(network=args.network)
+    w3 = build_w3(network=args.network)
     deploy_result = deploy_contract(w3, abi, bytecode)
     persist_artifact(abi, bytecode, deploy_result)
     print_summary(deploy_result)

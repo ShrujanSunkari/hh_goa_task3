@@ -2,7 +2,7 @@
 
 This guide explains how to manually verify the `IdentityRegistry.sol` smart contract on Sepolia Etherscan using Remix IDE. This is necessary because the contract uses OpenZeppelin `AccessControl`, which consists of multiple dependencies that Etherscan needs in order to match the deployed bytecode.
 
-**Contract Address:** `0x547c457d9c1d7d52825d4e0d9cd56cff5d527f58`
+**Contract Address:** `0x36D16b3185aED3645AC7cf7584d2e10891f9DA77`
 **Network:** Sepolia Testnet
 
 ---
@@ -40,3 +40,32 @@ This guide explains how to manually verify the `IdentityRegistry.sol` smart cont
 Once Etherscan processes the code, you will see a green checkmark ✅ and a success message: **"Contract Source Code Verified"**.
 
 Anyone can now visit your contract's page on Etherscan, click the **Contract** tab, and read the verified Solidity source code alongside the ABI!
+
+---
+
+## Step 3: Verify the Live Payload (For Judges)
+
+We have anchored a real identity payload hash on the Sepolia testnet to prove that the smart contract integration works in a live environment. You can verify this independently in under 2 minutes.
+
+### Method 1: Using the Verification Script
+
+We have provided an automated script that queries the live contract directly from your terminal.
+
+1. Ensure your `.env` contains a valid `WEB3_PROVIDER_URI` (e.g. an Infura Sepolia RPC).
+2. Run the verification script:
+   ```bash
+   python scripts/anchor_demo_record.py
+   ```
+3. **What happens:** The script generates the demo payload hash, queries the live smart contract via `verifyRecord()`, and prints the side-by-side comparison proving the on-chain hash matches the local one perfectly.
+
+### Method 2: Manual Verification via Etherscan
+
+If you prefer not to run the Python script, you can verify the payload directly through the Etherscan interface:
+
+1. Go to the verified contract on Etherscan: [0x36D16b3185aED3645AC7cf7584d2e10891f9DA77](https://sepolia.etherscan.io/address/0x36D16b3185aED3645AC7cf7584d2e10891f9DA77#readContract)
+2. Click on the **Read Contract** tab.
+3. Scroll down to the `verifyRecord` function.
+4. Paste the 32-byte payload hash we generated:
+   `0xd767eb0feff41474e9b1ecf3b2e6ad4cceeb8b580f157e142a77d244aafdc0fd`
+5. Click **Query**.
+6. The contract will return the on-chain record details (including the `sourceUrl` and `confidenceBps`), proving the biometric OSINT data is immutably anchored.
