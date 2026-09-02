@@ -75,10 +75,6 @@ class BlockchainAnchor:
         self._w3             = None   # lazy
         self._contract       = None   # lazy
 
-    # ─────────────────────────────────────────────────────────────────────────
-    #  Public: anchor_record
-    # ─────────────────────────────────────────────────────────────────────────
-
     @retry(stop=stop_after_attempt(3), wait=wait_random(min=2, max=10))
     def anchor_record(
         self,
@@ -86,6 +82,7 @@ class BlockchainAnchor:
         source_url:     str,
         confidence_bps: int,
         metadata_uri:   str = "",
+        image_path:     Optional[str] = None,
     ) -> Dict:
         """
         Call ``registerRecord`` on the deployed contract and return tx metadata.
@@ -107,26 +104,42 @@ class BlockchainAnchor:
         """
         b32 = _coerce_bytes32(data_hash)
         self._ensure_ready()
+        
+        if image_path and not metadata_uri:
+            metadata_uri = self._upload_to_ipfs(image_path)
 
         w3       = self._w3
         contract = self._contract
         import re as _re
         _raw = os.getenv("PRIVATE_KEY", "").strip().lstrip("0x")
         private_key = _raw if _re.fullmatch(r"[0-9a-fA-F]{64}", _raw) else ""
+        
+        if private_key:
+            sender = w3.eth.account.from_key(private_key).address
+        else:
+            sender = w3.eth.accounts[0]
 
         console.log(
             f"[bold cyan]BlockchainAnchor[/] → anchoring record "
             f"[green]{b32.hex()[:16]}…[/]"
         )
 
+        try:
+            gas_estimate = contract.functions.registerRecord(
+                b32, source_url, confidence_bps, metadata_uri
+            ).estimate_gas({"from": sender})
+            gas_limit = int(gas_estimate * 1.2)
+            console.log(f"[dim]Gas estimate: {gas_estimate} (limit: {gas_limit})[/]")
+        except Exception as e:
+            console.log(f"[yellow]Gas estimation failed: {e}. Using fallback 500,000.[/]")
+            gas_limit = 500_000
+
         tx_kwargs: Dict = {
-            "gas":      300_000,
+            "gas":      gas_limit,
             "gasPrice": w3.eth.gas_price,
         }
 
         if private_key:
-            acct    = w3.eth.account.from_key(private_key)
-            sender  = acct.address
             nonce   = w3.eth.get_transaction_count(sender)
             tx = contract.functions.registerRecord(
                 b32, source_url, confidence_bps, metadata_uri
@@ -134,7 +147,6 @@ class BlockchainAnchor:
             signed   = w3.eth.account.sign_transaction(tx, private_key)
             tx_hash  = w3.eth.send_raw_transaction(signed.raw_transaction)
         else:
-            sender = w3.eth.accounts[0]
             tx_hash = contract.functions.registerRecord(
                 b32, source_url, confidence_bps, metadata_uri
             ).transact({**tx_kwargs, "from": sender})
@@ -181,17 +193,30 @@ class BlockchainAnchor:
         import re as _re
         _raw = os.getenv("PRIVATE_KEY", "").strip().lstrip("0x")
         private_key = _raw if _re.fullmatch(r"[0-9a-fA-F]{64}", _raw) else ""
+        
+        if private_key:
+            sender = w3.eth.account.from_key(private_key).address
+        else:
+            sender = w3.eth.accounts[0]
 
         console.log(f"[bold cyan]BlockchainAnchor[/] → batch anchoring {len(b32_list)} records")
 
+        try:
+            gas_estimate = contract.functions.batchRegister(
+                b32_list, source_urls, confidence_bps_list, metadata_uris
+            ).estimate_gas({"from": sender})
+            gas_limit = int(gas_estimate * 1.2)
+            console.log(f"[dim]Batch gas estimate: {gas_estimate} (limit: {gas_limit})[/]")
+        except Exception as e:
+            console.log(f"[yellow]Batch gas estimation failed: {e}. Using fallback 3,000,000.[/]")
+            gas_limit = 3_000_000
+
         tx_kwargs: Dict = {
-            "gas":      3_000_000,
+            "gas":      gas_limit,
             "gasPrice": w3.eth.gas_price,
         }
 
         if private_key:
-            acct    = w3.eth.account.from_key(private_key)
-            sender  = acct.address
             nonce   = w3.eth.get_transaction_count(sender)
             tx = contract.functions.batchRegister(
                 b32_list, source_urls, confidence_bps_list, metadata_uris
@@ -199,7 +224,6 @@ class BlockchainAnchor:
             signed   = w3.eth.account.sign_transaction(tx, private_key)
             tx_hash  = w3.eth.send_raw_transaction(signed.raw_transaction)
         else:
-            sender = w3.eth.accounts[0]
             tx_hash = contract.functions.batchRegister(
                 b32_list, source_urls, confidence_bps_list, metadata_uris
             ).transact({**tx_kwargs, "from": sender})
@@ -247,7 +271,7 @@ class BlockchainAnchor:
             f"[yellow]{b32.hex()[:16]}…[/]"
         )
 
-        exists, source_url, confidence_bps, timestamp = (
+        exists, source_url, confidence_bps, timestamp, metadata_uri = (
             self._contract.functions.verifyRecord(b32).call()
         )
 
@@ -263,10 +287,47 @@ class BlockchainAnchor:
             "confidence_bps":       confidence_bps,
             "timestamp":            timestamp,
             "timestamp_formatted":  ts_fmt,
+            "metadata_uri":         metadata_uri,
         }
 
         _print_verify(result, b32.hex())
         return result
+
+    # ─────────────────────────────────────────────────────────────────────────
+    #  Private: IPFS via Pinata
+    # ─────────────────────────────────────────────────────────────────────────
+
+    def _upload_to_ipfs(self, image_path: str) -> str:
+        api_key = os.getenv("PINATA_API_KEY")
+        secret = os.getenv("PINATA_SECRET_API_KEY")
+        if not api_key or not secret:
+            console.log("[yellow]Pinata keys not found, skipping IPFS upload[/]")
+            return ""
+
+        console.log(f"[cyan]Uploading {image_path} to IPFS via Pinata...[/]")
+        import requests
+        headers = {
+            "pinata_api_key": api_key,
+            "pinata_secret_api_key": secret,
+        }
+        try:
+            with open(image_path, "rb") as f:
+                response = requests.post(
+                    "https://api.pinata.cloud/pinning/pinFileToIPFS",
+                    files={"file": f},
+                    headers=headers,
+                    timeout=15
+                )
+            if response.status_code == 200:
+                cid = response.json().get("IpfsHash")
+                console.log(f"[green]Uploaded to IPFS: ipfs://{cid}[/]")
+                return f"ipfs://{cid}"
+            else:
+                console.log(f"[red]Pinata upload failed: {response.text}[/]")
+                return ""
+        except Exception as e:
+            console.log(f"[red]Pinata upload error: {e}[/]")
+            return ""
 
     # ─────────────────────────────────────────────────────────────────────────
     #  Private: lazy initialisation
@@ -368,7 +429,7 @@ def _load_contract(w3: object, artifacts_path: Path) -> object:
         )
         deployer = w3.eth.accounts[0]
         Contract = w3.eth.contract(abi=abi, bytecode=bytecode)
-        tx_hash  = Contract.constructor().transact({"from": deployer, "gas": 1_500_000})
+        tx_hash  = Contract.constructor().transact({"from": deployer, "gas": 3_000_000})
         receipt  = w3.eth.wait_for_transaction_receipt(tx_hash)
         address  = receipt["contractAddress"]
         console.log(
@@ -491,7 +552,7 @@ if __name__ == "__main__":
 
     from web3 import Web3
     Contract = w3.eth.contract(abi=abi, bytecode=bytecode)
-    tx_hash  = Contract.constructor().transact({"from": w3.eth.accounts[0], "gas": 1_500_000})
+    tx_hash  = Contract.constructor().transact({"from": w3.eth.accounts[0], "gas": 3_000_000})
     receipt  = w3.eth.wait_for_transaction_receipt(tx_hash)
     address  = receipt["contractAddress"]
 
