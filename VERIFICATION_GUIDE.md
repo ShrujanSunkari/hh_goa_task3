@@ -2,7 +2,7 @@
 
 This guide explains how to manually verify the `IdentityRegistry.sol` smart contract on Sepolia Etherscan using Remix IDE. This is necessary because the contract uses OpenZeppelin `AccessControl`, which consists of multiple dependencies that Etherscan needs in order to match the deployed bytecode.
 
-**Contract Address:** `0x6548c5F097264c2d40a351D303696D23280019E6`
+**Contract Address:** `0x547c457d9c1d7d52825d4e0d9cd56cff5d527f58`
 **Network:** Sepolia Testnet
 
 ---
