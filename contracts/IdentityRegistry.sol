@@ -164,10 +164,11 @@ contract IdentityRegistry is AccessControl {
             bool    exists,
             string  memory sourceUrl,
             uint16  confidenceBps,
-            uint256 timestamp
+            uint256 timestamp,
+            string  memory metadataURI
         )
     {
         Record storage r = records[dataHash];
-        return (r.exists, r.sourceUrl, r.confidenceBps, r.timestamp);
+        return (r.exists, r.sourceUrl, r.confidenceBps, r.timestamp, r.metadataURI);
     }
 }

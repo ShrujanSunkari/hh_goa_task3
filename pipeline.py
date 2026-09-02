@@ -74,7 +74,7 @@ _MOCK_FACE_RESULT = {
     "cropped_path": "inputs/target_cropped.jpg",
     "facial_area":  {"x": 142, "y": 56, "w": 220, "h": 220},
     "confidence":   0.9973,
-    "embedding":    [0.0] * 512,
+    "embedding":    [0.0] * 128,
 }
 
 _MOCK_TX = {
@@ -104,10 +104,8 @@ def parse_args() -> argparse.Namespace:
                    help="Web3 RPC endpoint URI (overrides WEB3_PROVIDER_URI in .env)")
     p.add_argument("--offline-mock", action="store_true",
                    help="Simulate all external calls (no API keys or network required)")
-    p.add_argument("--detector",     default="retinaface",
-                   help="DeepFace detector backend (default: retinaface)")
-    p.add_argument("--model",        default="Facenet512",
-                   help="DeepFace embedding model (default: Facenet512)")
+    p.add_argument("--detector",     default="opencv",
+                   help="OpenCV detector backend (default: opencv)")
     p.add_argument("--json",         action="store_true",
                    help="Print the final result as JSON and exit")
     return p.parse_args()
@@ -122,7 +120,7 @@ def _banner() -> None:
     title.append("[ HH GOA 2026 ]\n",                                        style="bold bright_white")
     title.append("TASK 3 -- FACE IDENTIFICATION & BLOCKCHAIN VERIFICATION\n", style="bold cyan")
     title.append("-" * 56 + "\n",                                             style="dim cyan")
-    title.append("DeepFace  |  SerpAPI Google Lens  |  Ethereum (py-evm / Sepolia)",
+    title.append("OpenCV  |  SerpAPI Google Lens  |  Ethereum (py-evm / Sepolia)",
                  style="dim white")
 
     console.print()
@@ -173,7 +171,7 @@ def stage1_detect(args: argparse.Namespace) -> dict:
     _stage_rule(1, "Face Detection & Extraction", "cyan")
 
     if args.offline_mock:
-        console.log("[dim]offline-mock: skipping DeepFace, using synthetic result[/]")
+        console.log("[dim]offline-mock: skipping face detection, using synthetic result[/]")
         time.sleep(0.6)
         face = dict(_MOCK_FACE_RESULT)
         _print_face_result(face)
@@ -190,7 +188,7 @@ def stage1_detect(args: argparse.Namespace) -> dict:
     with _spinner("Scanning input image and extracting facial landmarks...", "bold cyan") as prog:
         prog.add_task("")
         try:
-            detector = FaceDetector(detector_backend=args.detector, model_name=args.model)
+            detector = FaceDetector(detector_backend=args.detector)
             face     = detector.detect_and_crop(image_path, output_path="inputs/target_cropped.jpg")
         except SystemExit:
             _exit_warn("No Face Detected",
@@ -346,6 +344,7 @@ def _print_search_result(payload: dict, payload_hash: dict) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def stage3_anchor(
+    face: dict,
     payload: dict,
     payload_hash: dict,
     args: argparse.Namespace,
@@ -405,6 +404,7 @@ def stage3_anchor(
                 data_hash=payload_hash["bytes32"],
                 source_url=payload["source_url"],
                 confidence_bps=payload["confidence_bps"],
+                image_path=face.get("cropped_path")
             )
         except RuntimeError as exc:
             msg = str(exc)
@@ -679,8 +679,7 @@ def main() -> None:
     
     if args.auto_demo:
         args.image = args.image or "inputs/sample.jpg"
-        args.detector = "retinaface"
-        args.model = "Facenet512"
+        args.detector = "opencv"
         args.top_n = 5
         
     if not args.image:
@@ -697,7 +696,7 @@ def main() -> None:
 
     face                  = stage1_detect(args)
     payload, payload_hash = stage2_search(face, args)
-    tx, anchor            = stage3_anchor(payload, payload_hash, args)
+    tx, anchor            = stage3_anchor(face, payload, payload_hash, args)
     verification          = stage4_verify(payload, payload_hash, tx, anchor, args)
     
     final_score = compute_final_verdict(face, payload)

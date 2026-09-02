@@ -4,7 +4,7 @@
 ![CI](https://img.shields.io/badge/CI-passing-brightgreen)
 <!-- Coverage badge coming soon -->
 ![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11-blue)
-[![Contract on Sepolia](https://img.shields.io/badge/Sepolia-Contract-blue)](https://sepolia.etherscan.io/address/0x7f7F0c2DF840d4173bb86d78a3813B74aC973964)
+[![Contract on Sepolia](https://img.shields.io/badge/Sepolia-Contract-blue)](https://sepolia.etherscan.io/address/0x24fc4768834e6066D66F105522D47Ad591B170Ec)
 
 > **Detect a face. Search the open web. Anchor the proof immutably on-chain.**
 > A production-grade Python pipeline that transforms a single photograph into a cryptographically signed, tamper-evident identity record stored on Ethereum.
@@ -97,7 +97,7 @@ sequenceDiagram
 * **Multi-engine Search**: We query SerpAPI (Google Lens), Bing Visual Search, and Yandex. This dramatically improves recall because each engine indexes different portions of the web and has different regional strengths, ensuring a higher likelihood of identity resolution.
 
 ## Live on Sepolia
-[![Contract on Sepolia](https://img.shields.io/badge/Sepolia-Contract-blue)](https://sepolia.etherscan.io/address/0x7f7F0c2DF840d4173bb86d78a3813B74aC973964)
+[![Contract on Sepolia](https://img.shields.io/badge/Sepolia-Contract-blue)](https://sepolia.etherscan.io/address/0x24fc4768834e6066D66F105522D47Ad591B170Ec)
 
 ---
 

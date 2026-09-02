@@ -85,8 +85,8 @@ Walk through each stage as it appears:
 
 > Pause on the green **[OK] Face Extracted** panel.
 
-**Say:** *"Stage 1: RetinaFace detected the face with 99.73% confidence,
-extracted a 512-dimensional Facenet embedding, and saved the crop."*
+**Say:** *"Stage 1: OpenCV Haar Cascade detected the face with high confidence,
+extracted a 128-dimensional colour histogram embedding, and saved the crop."*
 
 **Stage 2 — OSINT Search** (0:30 – 0:42)
 
@@ -163,7 +163,7 @@ That's Task 3 — done."*
 | 🥇 **1st** | `[PROOF] IDENTITY VERIFIED` (DOUBLE_EDGE green) | The main deliverable — cryptographic proof |
 | 🥈 **2nd** | `[CHAIN] Transaction Receipt` (magenta) | Shows real blockchain interaction |
 | 🥉 **3rd** | `[OK] OSINT Identification Complete` (yellow) | Demonstrates the AI + web search capability |
-| 4th | `[OK] Face Extracted` (green) | Shows DeepFace working |
+| 4th | `[OK] Face Extracted` (green) | Shows OpenCV face detection working |
 | 5th | `deploy.py` output (green) | Proves the contract is live |
 
 ---
