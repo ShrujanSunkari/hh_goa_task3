@@ -18,3 +18,13 @@ The pipeline uses SHA-256 hashing of the payload. Only the resulting hash is sto
 
 ## Tamper-Evidence
 On-chain verification compares the local hash against the stored hash, mathematically proving the immutability of the record. Any alteration to the original data will result in a mismatched hash, indicating tampering.
+
+## Known Vulnerabilities and Accepted Risks
+This project relies on `tensorflow-cpu==2.15.0` (and its dependencies like `keras` and `protobuf`) for the DeepFace ArcFace backend on Python 3.10 and 3.11.
+
+There are known CVEs associated with TensorFlow 2.15.0 and its pinned dependency versions (e.g., Keras 2.15.0, protobuf 4.25.x). 
+However, **we accept this risk** because:
+1. TensorFlow 2.16+ introduces Keras 3.0 breaking changes that currently break the `deepface` library.
+2. This application runs the face detection pipeline **entirely offline/local-only**. No untrusted remote code execution or adversarial ML model loading is exposed to the public internet.
+
+The CI `pip-audit` step is configured to `continue-on-error` to ensure we still see new vulnerabilities reported, without blocking the build on these specific accepted upstream TF 2.15.0 risks.
