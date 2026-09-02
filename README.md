@@ -30,7 +30,7 @@ This pipeline solves a hard real-world problem in three automated stages:
 
 | Stage | Module | What happens |
 |---|---|---|
-| **1 · Face Extraction** | `modules/face_detector.py` | RetinaFace locates the primary face, crops it with 20% padding, and extracts a 512-d Facenet embedding |
+| **1 · Face Extraction** | `modules/face_detector.py` | OpenCV Haar Cascade detects the primary face, crops it with 20% padding, and extracts a 128-d colour histogram embedding |
 | **2 · OSINT Identification** | `modules/web_search.py` | The cropped face is submitted to SerpAPI Google Lens; top results are ranked by social-domain priority; the matched page URL and thumbnail are captured |
 | **3 · Blockchain Anchoring** | `modules/blockchain.py` | A SHA-256 fingerprint of `(source_url ‖ thumbnail_bytes ‖ metadata)` is submitted to a Solidity smart contract on Ethereum; the record is immutable and publicly verifiable |
 
@@ -52,7 +52,7 @@ sequenceDiagram
 
     User  ->> CLI   : python pipeline.py --image photo.jpg
     CLI   ->> FD    : detect_and_crop(photo.jpg)
-    FD    -->> CLI  : {cropped_path, facial_area, confidence, embedding[512]}
+    FD    -->> CLI  : {cropped_path, facial_area, confidence, embedding[128]}
 
     CLI   ->> SE    : search_by_image(cropped_path)
     SE    ->> SE    : POST image → SerpAPI Google Lens
@@ -81,7 +81,6 @@ sequenceDiagram
 | Component | Technology | Version | Role |
 |---|---|---|---|
 | **Face Detection** | OpenCV Haar Cascade | `4.9.0.80` | Facial landmark detection, colour histogram embedding |
-| **Fallback Detector** | OpenCV Haar Cascade | `4.9.0.80` | Air-gapped / offline fallback |
 | **OSINT Search** | SerpAPI Google Lens | API v1 | Reverse image search, social-domain identification |
 | **Hashing** | Python `hashlib` SHA-256 | stdlib | Off-chain payload fingerprinting |
 | **Smart Contract** | Solidity / OpenZeppelin | `0.8.24` | Immutable on-chain identity registry with AccessControl |
@@ -218,8 +217,7 @@ python pipeline.py \
 | `--top-n` | `5` | Max OSINT candidates to evaluate |
 | `--rpc` | `WEB3_PROVIDER_URI` env | Web3 RPC endpoint override |
 | `--offline-mock` | `false` | Bypass all external calls for demo |
-| `--detector` | `retinaface` | DeepFace detector backend |
-| `--model` | `Facenet512` | DeepFace embedding model |
+| `--detector` | `opencv` | OpenCV detector backend |
 
 ---
 
@@ -265,7 +263,7 @@ hh_goa_task3/
 
 Storing raw biometric data on-chain would be:
 
-1. **Prohibitively expensive** — a 512-d float embedding is ~4 KB; at Ethereum gas prices that is hundreds of dollars per record.
+1. **Prohibitively expensive** — a 128-d float embedding is ~4 KB; at Ethereum gas prices that is hundreds of dollars per record.
 2. **Slow** — every byte written to `SSTORE` costs gas; block time adds latency.
 3. **Privacy-violating** — biometric data must be treated as PII; on-chain storage is permanent and public.
 

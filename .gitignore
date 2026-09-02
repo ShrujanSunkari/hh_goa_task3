@@ -8,3 +8,4 @@ __pycache__/
 *.log
 dnn_models/
 *.jpg
+proofs/
