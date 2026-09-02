@@ -11,7 +11,7 @@ import shutil
 from pathlib import Path
 from typing import Dict, Any
 
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Header
 from pydantic import BaseModel
 
 from pipeline import (
@@ -25,6 +25,15 @@ from pipeline import (
 
 app = FastAPI(title="HH GOA 2026 Face Identification API")
 
+# Require API key from env
+API_KEY = os.environ.get("API_KEY")
+
+async def verify_api_key(x_api_key: str = Header(...)):
+    if not API_KEY:
+        raise HTTPException(status_code=500, detail="Server API_KEY not configured")
+    if x_api_key != API_KEY:
+        raise HTTPException(status_code=403, detail="Forbidden: Invalid API Key")
+
 class HealthCheckResponse(BaseModel):
     status: str
 
@@ -33,7 +42,10 @@ def health_check():
     return {"status": "ok"}
 
 @app.post("/verify")
-def verify_identity(file: UploadFile = File(...)) -> Dict[str, Any]:
+def verify_identity(
+    file: UploadFile = File(...),
+    api_key: str = Depends(verify_api_key)
+) -> Dict[str, Any]:
     # 1. Save uploaded file temporarily
     inputs_dir = Path("inputs")
     inputs_dir.mkdir(exist_ok=True)
@@ -49,8 +61,8 @@ def verify_identity(file: UploadFile = File(...)) -> Dict[str, Any]:
             top_n=5,
             rpc=None,
             offline_mock=False,
-            detector="retinaface",
-            model="Facenet512",
+            detector="opencv",
+            model="histogram",
             json=True,
             auto_demo=False
         )

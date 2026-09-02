@@ -63,6 +63,7 @@ _MOCK_SEARCH_PAYLOAD = {
     "thumbnail_url":  "https://pbs.twimg.com/profile_images/1683325380441128960/yRsRRjGO_400x400.jpg",
     "image_bytes":    b"\xff\xd8\xff" + b"\x00" * 128,
     "confidence_bps": 9_700,
+    "identity_match_score": 0.95,
     "raw_matches": [
         {"title": "Elon Musk -- X",         "link": "https://x.com/elonmusk",                 "domain": "x.com"},
         {"title": "Elon Musk -- Wikipedia", "link": "https://en.wikipedia.org/wiki/Elon_Musk", "domain": "wikipedia.org"},
@@ -280,6 +281,17 @@ def stage2_search(face: dict, args: argparse.Namespace) -> tuple[dict, dict]:
         with open(face["cropped_path"], "rb") as f:
             payload["image_bytes"] = f.read()
 
+    # Face Comparison
+    if payload.get("image_bytes"):
+        thumbnail_path = Path("inputs") / "thumbnail.jpg"
+        with open(thumbnail_path, "wb") as f:
+            f.write(payload["image_bytes"])
+        from modules.face_detector import FaceDetector
+        detector = FaceDetector(detector_backend=args.detector)
+        payload["identity_match_score"] = detector.compare_faces(face["cropped_path"], str(thumbnail_path))
+    else:
+        payload["identity_match_score"] = 0.0
+
     payload_hash = engine.generate_payload_hash(
         source_url=payload["source_url"],
         image_bytes=payload["image_bytes"],
@@ -327,6 +339,9 @@ def _print_search_result(payload: dict, payload_hash: dict) -> None:
     summary.add_row("Image Data",   f"{len(payload['image_bytes']):,} bytes")
     summary.add_row("Confidence",   f"[bold green]{payload['confidence_bps']/100:.2f}%[/]  "
                                     f"[dim]({payload['confidence_bps']} bps)[/]")
+    
+    match_score = payload.get("identity_match_score", 0.0)
+    summary.add_row("Identity Match", f"[bold magenta]{match_score * 100:.1f}%[/] similarity")
     summary.add_row("-" * 16,       "-" * 40)
     summary.add_row("Payload Hash", f"[bold bright_green]{payload_hash['hex']}[/]")
 
@@ -620,6 +635,7 @@ def compute_final_verdict(face: dict, payload: dict) -> dict:
     tbl.add_column("Value", style="cyan")
     
     tbl.add_row("Final Score", f"[{color}]{score:.1f}%[/]")
+    tbl.add_row("Identity Match", f"[bold magenta]{payload.get('identity_match_score', 0.0) * 100:.1f}%[/]")
     tbl.add_row("Verdict", f"[bold {color}]{label}[/]")
     
     console.print(Panel(tbl, title="[bold white] 🎯 Final Verdict", border_style=color))
@@ -660,6 +676,7 @@ Cropped Face Hash: {crop_hash}
 Source URL: {payload.get("source_url", "N/A")}
 Domain: {payload.get("domain", "N/A")}
 Search Confidence: {payload.get("confidence_bps", 0) / 100.0}%
+Identity Match Similarity: {payload.get("identity_match_score", 0.0) * 100:.1f}%
 
 [ BLOCKCHAIN RECORD ]
 Transaction Hash: {tx.get("tx_hash", "N/A")}

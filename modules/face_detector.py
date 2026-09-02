@@ -266,6 +266,26 @@ class FaceDetector:
             "embedding":    embedding,
         }
 
+    def compare_faces(self, face1_path: str, face2_path: str) -> float:
+        """
+        Compare two face crops using cosine similarity of their 128-d histograms.
+        Returns a float between 0.0 and 1.0.
+        """
+        img1 = cv2.imread(face1_path)
+        img2 = cv2.imread(face2_path)
+        
+        if img1 is None or img2 is None:
+            console.log("[yellow]Warning: Could not read one or both images for face comparison.[/]")
+            return 0.0
+            
+        emb1 = np.array(_histogram_embedding(img1, dims=_EMBEDDING_DIM))
+        emb2 = np.array(_histogram_embedding(img2, dims=_EMBEDDING_DIM))
+        
+        # Since _histogram_embedding already L2-normalizes, cosine similarity is just the dot product
+        similarity = np.dot(emb1, emb2)
+        # Clip to [0, 1] to handle tiny floating point inaccuracies
+        return float(np.clip(similarity, 0.0, 1.0))
+
     # ─────────────────────────────────────────────────────────────────────────
     #  Detector 1: Haar Cascade (OpenCV 4.x)
     # ─────────────────────────────────────────────────────────────────────────
