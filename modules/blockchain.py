@@ -260,13 +260,14 @@ class BlockchainAnchor:
     #  Public: verify_record
     # ─────────────────────────────────────────────────────────────────────────
 
-    def verify_record(self, data_hash: Union[bytes, str]) -> Dict:
+    def verify_record(self, data_hash: Union[bytes, str], silent: bool = False) -> Dict:
         """
         Call the ``verifyRecord`` view function and return a structured result.
 
         Parameters
         ----------
         data_hash : 32-byte ``bytes`` object  **or** "0x..." hex string.
+        silent    : If True, suppresses console output.
 
         Returns
         -------
@@ -276,10 +277,11 @@ class BlockchainAnchor:
         b32 = _coerce_bytes32(data_hash)
         self._ensure_ready()
 
-        console.log(
-            f"[bold cyan]BlockchainAnchor[/] → verifying "
-            f"[yellow]{b32.hex()[:16]}…[/]"
-        )
+        if not silent:
+            console.log(
+                f"[bold cyan]BlockchainAnchor[/] → verifying "
+                f"[yellow]{b32.hex()[:16]}…[/]"
+            )
 
         exists, source_url, confidence_bps, timestamp, metadata_uri = (
             self._contract.functions.verifyRecord(b32).call()
@@ -300,7 +302,8 @@ class BlockchainAnchor:
             "metadata_uri": metadata_uri,
         }
 
-        _print_verify(result, b32.hex())
+        if not silent:
+            _print_verify(result, b32.hex())
         return result
 
     # ─────────────────────────────────────────────────────────────────────────

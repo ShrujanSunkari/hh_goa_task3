@@ -574,7 +574,21 @@ def stage4_verify(
     ) as prog:
         prog.add_task("")
         try:
-            verification = anchor.verify_record(payload_hash["bytes32"])
+            max_retries = 5
+            for attempt in range(max_retries):
+                # Use silent=True for retries to avoid spamming the console
+                is_last = attempt == max_retries - 1
+                verification = anchor.verify_record(
+                    payload_hash["bytes32"], silent=not is_last
+                )
+                if verification["exists"]:
+                    break
+
+                if not is_last:
+                    console.log(
+                        f"[dim]RPC node sync lag detected (attempt {attempt+1}/{max_retries}). Retrying in 4s...[/]"
+                    )
+                    time.sleep(4)
         except Exception as exc:
             _exit_err("Verification Error", str(exc))
 
@@ -582,7 +596,7 @@ def stage4_verify(
         _exit_err(
             "Verification Failed",
             "verifyRecord() returned exists=False after anchoring.\n"
-            "Check your RPC node state.",
+            "Check your RPC node state or wait for blocks to sync.",
         )
 
     hash_match = verification["source_url"] == payload["source_url"]
