@@ -59,7 +59,7 @@ def verify_identity(file: UploadFile = File(...)) -> Dict[str, Any]:
         try:
             face = stage1_detect(args)
             payload, payload_hash = stage2_search(face, args)
-            tx, anchor = stage3_anchor(payload, payload_hash, args)
+            tx, anchor = stage3_anchor(face, payload, payload_hash, args)
             verification = stage4_verify(payload, payload_hash, tx, anchor, args)
             
             final_score = compute_final_verdict(face, payload)

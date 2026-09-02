@@ -15,4 +15,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Default command
-CMD ["python", "pipeline.py", "--offline-mock"]
+CMD ["python", "pipeline.py", "--auto-demo"]

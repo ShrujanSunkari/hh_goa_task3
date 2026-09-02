@@ -2,9 +2,9 @@
 ### HH Goa 2026 · Task 3
 
 ![CI](https://img.shields.io/badge/CI-passing-brightgreen)
-![Coverage](https://img.shields.io/badge/Coverage-100%25-brightgreen)
+<!-- Coverage badge coming soon -->
 ![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11-blue)
-[![Contract on Sepolia](https://img.shields.io/badge/Sepolia-Contract-blue)](https://sepolia.etherscan.io/address/0x1FA03Ad458DFE2e609F6ae8cf91f5440A0E481E0)
+[![Contract on Sepolia](https://img.shields.io/badge/Sepolia-Contract-blue)](https://sepolia.etherscan.io/address/0x7f7F0c2DF840d4173bb86d78a3813B74aC973964)
 
 > **Detect a face. Search the open web. Anchor the proof immutably on-chain.**
 > A production-grade Python pipeline that transforms a single photograph into a cryptographically signed, tamper-evident identity record stored on Ethereum.
@@ -34,9 +34,8 @@ This pipeline solves a hard real-world problem in three automated stages:
 | **2 · OSINT Identification** | `modules/web_search.py` | The cropped face is submitted to SerpAPI Google Lens; top results are ranked by social-domain priority; the matched page URL and thumbnail are captured |
 | **3 · Blockchain Anchoring** | `modules/blockchain.py` | A SHA-256 fingerprint of `(source_url ‖ thumbnail_bytes ‖ metadata)` is submitted to a Solidity smart contract on Ethereum; the record is immutable and publicly verifiable |
 
-A fourth **Verification Stage** immediately re-reads the on-chain record and compares the local hash, producing cryptographic proof that the anchored record is uncorrupted. You can independently verify the record using the deployed contract on Sepolia Etherscan.
+A fourth **Verification Stage** immediately re-reads the on-chain record and compares the local payload hash to the stored on-chain hash.
 
----
 
 ## Architecture & Data Flow
 
@@ -45,7 +44,7 @@ sequenceDiagram
     autonumber
     actor User
     participant CLI   as pipeline.py
-    participant FD    as FaceDetector<br/>(DeepFace / RetinaFace)
+    participant FD    as FaceDetector<br/>(OpenCV Haar Cascade + colour histogram)
     participant SE    as WebSearchEngine<br/>(SerpAPI Google Lens)
     participant Hash  as SHA-256 Hasher
     participant W3    as Web3.py
@@ -81,7 +80,7 @@ sequenceDiagram
 
 | Component | Technology | Version | Role |
 |---|---|---|---|
-| **Face Detection** | DeepFace + RetinaFace | `0.0.93` | Facial landmark detection, 512-d Facenet embedding |
+| **Face Detection** | OpenCV Haar Cascade | `4.9.0.80` | Facial landmark detection, colour histogram embedding |
 | **Fallback Detector** | OpenCV Haar Cascade | `4.9.0.80` | Air-gapped / offline fallback |
 | **OSINT Search** | SerpAPI Google Lens | API v1 | Reverse image search, social-domain identification |
 | **Hashing** | Python `hashlib` SHA-256 | stdlib | Off-chain payload fingerprinting |
@@ -93,13 +92,13 @@ sequenceDiagram
 | **Compiler** | py-solc-x (solc 0.8.24) | auto | Inline Solidity compilation |
 
 ### Why This Stack – Engineering Decisions
-* **RetinaFace vs Haar Cascade**: RetinaFace is significantly more accurate and resilient to challenging angles and lighting compared to the older OpenCV Haar Cascades, which suffer from false positives and misses. Haar remains a fallback for environments without TensorFlow.
+* **OpenCV Haar Cascade + colour histogram**: Used as a robust, offline-capable baseline for air-gapped environments. While modern deep learning models (like RetinaFace/ArcFace) offer higher accuracy, this implementation guarantees zero external dependencies for the extraction stage.
 * **SHA-256 vs Keccak-256**: SHA-256 is used for the off-chain payload hash because it aligns with standard OSINT and forensic workflows. `bytes32` on-chain comfortably stores it, reducing the need for Solidity-specific tooling (like Keccak) when external auditors verify the proof.
 * **Local EVM vs Sepolia**: The pipeline supports an in-process Py-EVM. This delivers an instant, zero-cost, zero-latency demonstration without requiring testnet ETH, Infura keys, or waiting for block confirmations, while retaining the ability to deploy to the live Sepolia testnet when true immutability is needed.
 * **Multi-engine Search**: We query SerpAPI (Google Lens), Bing Visual Search, and Yandex. This dramatically improves recall because each engine indexes different portions of the web and has different regional strengths, ensuring a higher likelihood of identity resolution.
 
 ## Live on Sepolia
-[![Contract on Sepolia](https://img.shields.io/badge/Sepolia-Contract-blue)](https://sepolia.etherscan.io/address/0x547C457D9c1d7d52825D4e0D9CD56cFF5D527f58)
+[![Contract on Sepolia](https://img.shields.io/badge/Sepolia-Contract-blue)](https://sepolia.etherscan.io/address/0x7f7F0c2DF840d4173bb86d78a3813B74aC973964)
 
 ---
 
@@ -128,8 +127,8 @@ docker run face-id
 ### 1 · Clone & Install
 
 ```bash
-git clone https://github.com/youruser/task3.git
-cd task3
+git clone https://github.com/ShrujanSunkari/hh_goa_task3.git
+cd hh_goa_task3
 
 pip install -r requirements.txt
 pip install py-solc-x          # Solidity compiler wrapper (auto-downloads solc)
@@ -242,7 +241,7 @@ python modules/blockchain.py
 ## Module Reference
 
 ```
-task3/
+hh_goa_task3/
 ├── contracts/
 │   ├── IdentityRegistry.sol              Solidity registry contract
 │   └── IdentityRegistry_artifacts.json  ABI + bytecode + deployed address
@@ -287,10 +286,11 @@ mapping(bytes32 => Record) public records
 | Function | Type | Description |
 |---|---|---|
 | `registerRecord(dataHash, sourceUrl, confidenceBps, metadataURI)` | `external` | Anchor a new record; reverts on duplicate |
-| `batchRegister(dataHashes[], sourceUrls[], confidenceBps[], metadataURIs[])` | `external` | Batch anchor multiple records efficiently in a single transaction |
-| `verifyRecord(dataHash)` | `external view` | Read-only verification; zero gas cost |
+| `batchRegister(dataHashes[], ...)` | `external` | Anchor multiple records; skips duplicates |
 
-**Duplicate prevention**: `require(!records[dataHash].exists)` ensures that each unique payload hash can only be registered once, making the ledger **append-only** and **tamper-evident**. The `batchRegister` function gracefully skips duplicates to prevent reverting the entire batch.
+2. **AccessControl Roles**: The `IdentityRegistry` uses OpenZeppelin's `AccessControl` to restrict the ability to anchor records. A specific `REGISTRAR_ROLE` is required to call registration functions, preventing spam from unauthorized addresses.
+3. **Immutability via Reverts**: The smart contract maps each `bytes32 dataHash` to a `Record` struct. If a caller attempts to submit a duplicate hash, the `require(!records[dataHash].exists)` statement immediately reverts the transaction.
+4. **Off-Chain Storage (IPFS)**: The `metadataURI` field on the registry securely stores a decentralized reference (CID) to the cropped face via Pinata (IPFS). This ensures the visual evidence is permanently accessible and linked directly to the on-chain identity record without bloating the blockchain state. A unique payload hash can only be registered once, making the ledger **append-only** and **tamper-evident**. The `batchRegister` function gracefully skips duplicates to prevent reverting the entire batch.
 
 **Event**: `RecordRegistered(indexed bytes32 dataHash, string sourceUrl, uint16 confidenceBps, uint256 timestamp)` — enables off-chain listeners and block explorers to index all anchored records.
 
@@ -312,7 +312,7 @@ The hash is **deterministic** — given the same URL, image, and metadata, any p
 
 ### What works well
 
-- **DeepFace / RetinaFace** delivers state-of-the-art face detection with automatic OpenCV fallback for air-gapped environments.
+- **OpenCV Haar Cascade + colour histogram** delivers fast face detection for air-gapped environments.
 - **Priority-domain scoring** surfaces LinkedIn, X, GitHub, and Wikipedia results before generic web hits.
 - **py-evm** provides a zero-cost, zero-latency local chain so the full pipeline can be demoed without testnet funds or a network connection.
 - **Duplicate guard** at both Python level (`verify_record` pre-flight) and Solidity level (`require(!exists)`) ensures idempotency.
@@ -322,10 +322,9 @@ The hash is **deterministic** — given the same URL, image, and metadata, any p
 | Limitation | Impact | Mitigation |
 |---|---|---|
 | **SerpAPI rate limit** | 100 free searches/month; shared-key exhaustion | Use `--offline-mock` for demos; upgrade plan for production |
-| **Face recognition accuracy** | Identical twins, heavy makeup, low-res images reduce accuracy | Add liveness detection; require minimum crop resolution |
-| **OSINT coverage** | Subjects without a public web presence return no matches | Expand to Bing Visual Search, PimEyes, or dedicated face-search APIs |
+| **Face recognition accuracy** | Identical twins, heavy makeup, low-res images reduce accuracy | Require minimum crop resolution |
+| **OSINT coverage** | Subjects without a public web presence return no matches | Expand to PimEyes or dedicated face-search APIs |
 | **On-chain privacy** | `sourceUrl` and `confidenceBps` are publicly readable on testnet/mainnet | Encrypt fields or move to a permissioned chain |
-| **No access control** | Any address can register any hash | Add `onlyOwner` or role-based access to `registerRecord` |
 | **Gas on mainnet** | ~20,000 gas per record; affordable on L2 but costly on L1 | Deploy to Polygon, Arbitrum, or Base |
 
 ---
@@ -336,7 +335,7 @@ Average timings measured on a standard laptop (8-core, 16GB RAM) during local ru
 
 | Stage | Average Time |
 |---|---|
-| **Face Detection (RetinaFace)** | ~2s |
+| **Face Detection (OpenCV Haar Cascade)** | ~2s |
 | **OSINT Search (multi-engine)** | ~5s |
 | **Blockchain Anchoring (local py-evm)** | ~1s |
 | **Total End-to-End** | ~8s |
@@ -367,10 +366,9 @@ This would allow **on-chain verification of identity claims without revealing bi
 ### Other Roadmap Items
 
 - [ ] **Multi-face support** — process group photos and anchor each face independently
-- [ ] **Liveness detection** — prevent spoofing with printed photos (blink detection, depth map)
-- [ ] **IPFS storage** — pin the face crop to IPFS and store the CID alongside the hash
+- [ ] **Multi-chain support** — expand anchoring logic to other L2s like Polygon and Arbitrum
+- [ ] **Zero-knowledge proof integration** — transition from hash-based evidence to true ZKP circuits
 - [ ] **ENS / DID integration** — link verified identities to Ethereum Name Service or W3C DIDs
-- [ ] **REST API wrapper** — expose the pipeline as a FastAPI service for integration
 
 ---
 
