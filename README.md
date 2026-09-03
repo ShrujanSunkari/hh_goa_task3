@@ -217,7 +217,7 @@ CONTRACT_ADDRESS=
 
 ### 3 · Deploy the Smart Contract
 
-First, install the required Solidity dependencies:
+First, install the required Solidity dependencies (`@openzeppelin/contracts`):
 ```bash
 npm install
 ```
@@ -395,7 +395,8 @@ The hash is **deterministic** — given the same URL, image, and metadata, any p
 
 - **OpenCV Haar Cascade** delivers reliable offline face detection with no ML dependencies.
 - **DeepFace/ArcFace** provides true 512-d biometric embeddings when TensorFlow is available (Python ≤ 3.11).
-- **Priority-domain scoring** surfaces LinkedIn, X, GitHub, and Wikipedia results before generic web hits.
+- **High-Accuracy OSINT Matching**: Concurrently searches both the full image context (to preserve background/clothing details) and the biometric face crop, seamlessly merging results.
+- **Priority-domain scoring** surfaces LinkedIn, X, GitHub, and Wikipedia results before generic web hits, with explicit logic to prioritize actual social profiles over generic post reactions.
 - **py-evm** provides a zero-cost, zero-latency local chain so the full pipeline can be demoed without testnet funds or a network connection.
 - **Duplicate guard** at both Python level (`verify_record` pre-flight) and Solidity level (`require(!exists)`) ensures idempotency.
 
@@ -404,8 +405,7 @@ The hash is **deterministic** — given the same URL, image, and metadata, any p
 | Limitation | Impact | Mitigation |
 |---|---|---|
 | **TensorFlow / Python version** | DeepFace/ArcFace unavailable on Python 3.12+; OpenCV Haar Cascade fallback is used automatically. Current local dev environment runs Python 3.14 | Use Python 3.10 (pinned in `.python-version`, Dockerfile, CI) with `pip install -r requirements.txt` for ArcFace embeddings |
-| **SerpAPI rate limit** | 100 free searches/month; shared-key exhaustion | Use `--offline-mock` for demos; upgrade plan for production |
-| **Single search engine** | Only SerpAPI Google Lens is queried; engine outage causes pipeline failure | Multi-engine fallback (Bing, Yandex) is planned but not yet implemented |
+| **API rate limits** | SerpAPI, Bing, and Yandex have rate limits and require keys | Use `--offline-mock` for local zero-cost demos |
 | **Face recognition accuracy** | Identical twins, heavy makeup, low-res images reduce accuracy | Require minimum crop resolution |
 | **OSINT coverage** | Subjects without a public web presence return no matches | Expand to PimEyes or dedicated face-search APIs |
 | **On-chain privacy (demo mode)** | With `--demo-mode`, `sourceUrl` and `confidenceBps` are stored in plaintext on-chain. **Default (no flag) is privacy-preserving**: only a Keccak256 hash is stored | Omit `--demo-mode` (default) for production; the pipeline prints a green banner confirming which mode is active |

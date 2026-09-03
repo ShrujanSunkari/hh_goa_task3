@@ -173,52 +173,49 @@ class WebSearchEngine:
             f"[bold cyan]WebSearchEngine[/] → Searching on " f"[yellow]{image_path}[/]"
         )
 
-        def _run_searches(search_img: str) -> tuple[List[_Match], str]:
-            # 1. SerpAPI (Google Lens)
+        def _get_raw_searches(search_img: str) -> tuple[List[Dict], List[Dict], List[Dict]]:
+            raw_serp, raw_bing, raw_yandex = [], [], []
             try:
                 self._require_key()
-                raw_response = self._call_serpapi(search_img)
-                raw_serp = raw_response.get("visual_matches", [])
-                if raw_serp:
-                    console.log(
-                        "[green]SerpAPI returned matches. Skipping fallbacks.[/]"
-                    )
-                    return _merge_and_deduplicate([raw_serp]), "serpapi"
-            except (EnvironmentError, RuntimeError) as e:
+                raw_serp = self._call_serpapi(search_img).get("visual_matches", [])
+                if raw_serp: console.log("[green]SerpAPI returned matches.[/]")
+            except Exception as e:
                 console.log(f"[yellow]SerpAPI encountered an error: {e}[/]")
 
-            # 2. Bing Fallback
-            console.log(
-                "[yellow]SerpAPI returned no results or failed. Falling back to Bing...[/]"
-            )
+            console.log("[dim]Searching Bing...[/]")
             raw_bing = self._bing_search(search_img)
-            if raw_bing:
-                console.log("[green]Bing returned matches. Skipping Yandex.[/]")
-                return _merge_and_deduplicate([raw_bing]), "bing"
+            if raw_bing: console.log("[green]Bing returned matches.[/]")
 
-            # 3. Yandex Fallback
-            console.log(
-                "[yellow]Bing returned no results or failed. Falling back to Yandex...[/]"
-            )
+            console.log("[dim]Searching Yandex...[/]")
             raw_yandex = self._yandex_search(search_img)
-            if raw_yandex:
-                console.log("[green]Yandex returned matches.[/]")
-                return _merge_and_deduplicate([raw_yandex]), "yandex"
+            if raw_yandex: console.log("[green]Yandex returned matches.[/]")
+            
+            return raw_serp, raw_bing, raw_yandex
 
-            return [], ""
-
-        # Enhance the crop first
         enhanced_img = self._enhance_image(img_path)
-        scored, engine_used = _run_searches(enhanced_img)
-
-        # Fallback to full image if no matches
-        if not scored and original_image_path:
-            console.log(
-                "[INFO] No matches with face crop. Retrying with full image for better context..."
-            )
+        console.log("[dim]Gathering OSINT matches for face crop...[/]")
+        crop_serp, crop_bing, crop_yandex = _get_raw_searches(enhanced_img)
+        
+        full_serp, full_bing, full_yandex = [], [], []
+        if original_image_path:
+            console.log("[dim]Gathering OSINT matches for full image context...[/]")
             orig_img_path = self._validate_image(original_image_path)
             enhanced_orig = self._enhance_image(orig_img_path)
-            scored, engine_used = _run_searches(enhanced_orig)
+            full_serp, full_bing, full_yandex = _get_raw_searches(enhanced_orig)
+            
+        all_serp = crop_serp + full_serp
+        all_bing = crop_bing + full_bing
+        all_yandex = crop_yandex + full_yandex
+        
+        engines_used = []
+        if all_serp: engines_used.append("serpapi")
+        if all_bing: engines_used.append("bing")
+        if all_yandex: engines_used.append("yandex")
+        engine_used = "+".join(engines_used) if engines_used else ""
+        scored = _merge_and_deduplicate([
+            full_serp, full_bing, full_yandex,
+            crop_serp, crop_bing, crop_yandex
+        ])
 
         if not scored:
             _warn(
@@ -579,43 +576,9 @@ class WebSearchEngine:
 
     def _enhance_image(self, image_path: str) -> str:
         """
-        Apply image enhancement (sharpening, contrast, upscale) before search.
-        Returns path to enhanced image.
+        Return the image path directly without harsh enhancement that corrupts face crops.
         """
-        console.log(f"[dim]Enhancing image for search: {image_path}[/]")
-
-        try:
-            img = cv2.imread(image_path)
-            if img is None:
-                console.log(
-                    "[yellow]Failed to read image for enhancement. Using original.[/]"
-                )
-                return image_path
-
-            # 1. Sharpening
-            kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
-            img = cv2.filter2D(img, -1, kernel)
-
-            # 2. Contrast enhancement (convertScaleAbs)
-            img = cv2.convertScaleAbs(img, alpha=1.2, beta=30)
-
-            # 3. Upscale to at least 800px on shortest side
-            h, w = img.shape[:2]
-            shortest_side = min(h, w)
-            if shortest_side < 800:
-                scale = 800 / shortest_side
-                new_w = int(w * scale)
-                new_h = int(h * scale)
-                img = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_LANCZOS4)
-
-            # Save enhanced image
-            out_path = "inputs/enhanced_crop.jpg"
-            cv2.imwrite(out_path, img)
-            return out_path
-
-        except Exception as exc:
-            console.log(f"[yellow]Image enhancement failed: {exc}. Using original.[/]")
-            return image_path
+        return image_path
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -659,6 +622,8 @@ def _merge_and_deduplicate(results_lists: List[List[Dict]]) -> List[_Match]:
             penalty = 0
 
             domain_lower = domain.lower()
+            url_lower = url.lower()
+            
             if any(d in domain_lower for d in _AUTHORITATIVE_HIGH):
                 bonus = 2500
             elif any(d in domain_lower for d in _AUTHORITATIVE_MED):
@@ -666,6 +631,13 @@ def _merge_and_deduplicate(results_lists: List[List[Dict]]) -> List[_Match]:
 
             if any(d in domain_lower for d in _JUNK_DOMAINS):
                 penalty = 5000
+
+            # Explicitly favor profile pages over activity/posts
+            if "linkedin.com" in domain_lower:
+                if "/in/" in url_lower:
+                    bonus += 1000
+                elif "/posts/" in url_lower or "/activity/" in url_lower or "/pulse/" in url_lower:
+                    penalty += 2000
 
             confidence_bps = max(0, min(10000, base_score + bonus - penalty))
 

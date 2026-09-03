@@ -184,27 +184,37 @@ class FaceDetector:
         db_path.parent.mkdir(parents=True, exist_ok=True)
         self.conn = sqlite3.connect(str(db_path))
         self.conn.execute(
-            "CREATE TABLE IF NOT EXISTS embeddings (hash TEXT PRIMARY KEY, embedding BLOB)"
+            "CREATE TABLE IF NOT EXISTS embeddings (hash TEXT PRIMARY KEY, embedding BLOB, x INTEGER, y INTEGER, w INTEGER, h INTEGER)"
         )
         self.conn.commit()
 
-    def _get_cached_embedding(self, img_hash: str) -> Optional[List[float]]:
+    def _get_cached_embedding(self, img_hash: str) -> Optional[Tuple[List[float], Dict]]:
         """Retrieve a cached embedding by image hash."""
         cur = self.conn.cursor()
-        cur.execute("SELECT embedding FROM embeddings WHERE hash = ?", (img_hash,))
+        try:
+            cur.execute("SELECT embedding, x, y, w, h FROM embeddings WHERE hash = ?", (img_hash,))
+        except sqlite3.OperationalError:
+            # Table might be using the old schema, silently ignore and return None
+            return None
         row = cur.fetchone()
         if row:
-            return np.frombuffer(row[0], dtype=np.float64).tolist()
+            emb = np.frombuffer(row[0], dtype=np.float64).tolist()
+            region = {"x": row[1], "y": row[2], "w": row[3], "h": row[4]}
+            return emb, region
         return None
 
-    def _cache_embedding(self, img_hash: str, embedding: List[float]) -> None:
-        """Cache a newly computed embedding."""
+    def _cache_embedding(self, img_hash: str, embedding: List[float], region: Dict) -> None:
+        """Cache a newly computed embedding and facial area."""
         emb_array = np.array(embedding, dtype=np.float64)
-        self.conn.execute(
-            "INSERT OR REPLACE INTO embeddings (hash, embedding) VALUES (?, ?)",
-            (img_hash, emb_array.tobytes()),
-        )
-        self.conn.commit()
+        try:
+            self.conn.execute(
+                "INSERT OR REPLACE INTO embeddings (hash, embedding, x, y, w, h) VALUES (?, ?, ?, ?, ?, ?)",
+                (img_hash, emb_array.tobytes(), region["x"], region["y"], region["w"], region["h"]),
+            )
+            self.conn.commit()
+        except sqlite3.OperationalError:
+            # Ignore cache errors if the schema is out of date
+            pass
 
     # ─────────────────────────────────────────────────────────────────────────
     #  Public API
@@ -239,18 +249,38 @@ class FaceDetector:
             img_bytes = f.read()
         img_hash = hashlib.sha256(img_bytes).hexdigest()
 
-        cached_emb = self._get_cached_embedding(img_hash)
-        if cached_emb is not None:
+        cached_result = self._get_cached_embedding(img_hash)
+        if cached_result is not None:
+            cached_emb, region = cached_result
             console.log(
                 f"[green]Retrieved cached embedding for[/] [yellow]{image_path}[/]"
             )
-            region = {"x": 0, "y": 0, "w": 0, "h": 0}
             method = (
                 "arcface" if len(cached_emb) == 512 else "opencv_histogram_fallback"
             )
-            _print_result(str(src), region, 1.0, len(cached_emb), method)
+            
+            # Crop the image using the cached region
+            img_bgr = cv2.imread(str(src))
+            if img_bgr is not None:
+                h_img, w_img = img_bgr.shape[:2]
+                x, y, w, h = region["x"], region["y"], region["w"], region["h"]
+                pad_x = int(w * _FACE_PAD)
+                pad_y = int(h * _FACE_PAD)
+                x1 = max(0, x - pad_x)
+                y1 = max(0, y - pad_y)
+                x2 = min(w_img, x + w + pad_x)
+                y2 = min(h_img, y + h + pad_y)
+                
+                crop = img_bgr[y1:y2, x1:x2]
+                Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+                cv2.imwrite(output_path, crop)
+                crop_path = str(Path(output_path).resolve())
+            else:
+                crop_path = str(src)
+
+            _print_result(crop_path, region, 1.0, len(cached_emb), method)
             return {
-                "cropped_path": str(src),
+                "cropped_path": crop_path,
                 "facial_area": region,
                 "confidence": 1.0,
                 "blur_score": 500.0,
@@ -308,7 +338,7 @@ class FaceDetector:
                     cv2.imwrite(output_path, crop)
                     crop_path = str(Path(output_path).resolve())
 
-                    self._cache_embedding(img_hash, emb)
+                    self._cache_embedding(img_hash, emb, region)
                     _print_result(crop_path, region, confidence, len(emb), "arcface")
 
                     histogram_embedding = _histogram_embedding(
@@ -374,7 +404,7 @@ class FaceDetector:
         # ── 128-d colour histogram embedding ─────────────────────────────────
         embedding = _histogram_embedding(crop, dims=_EMBEDDING_DIM)
 
-        self._cache_embedding(img_hash, embedding)
+        self._cache_embedding(img_hash, embedding, region)
 
         _print_result(
             crop_path, region, confidence, len(embedding), "opencv_histogram_fallback"
