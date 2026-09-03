@@ -1,0 +1,191 @@
+2026-09-03 08:34:50.558480: I external/local_tsl/tsl/cuda/cudart_stub.cc:31] Could not find cuda drivers on your machine, GPU will not be used.
+2026-09-03 08:34:50.588737: E external/local_xla/xla/stream_executor/cuda/cuda_dnn.cc:9261] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+2026-09-03 08:34:50.588780: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:607] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+2026-09-03 08:34:50.589720: E external/local_xla/xla/stream_executor/cuda/cuda_blas.cc:1515] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+2026-09-03 08:34:50.595194: I external/local_tsl/tsl/cuda/cudart_stub.cc:31] Could not find cuda drivers on your machine, GPU will not be used.
+2026-09-03 08:34:50.595424: I tensorflow/core/platform/cpu_feature_guard.cc:182] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2026-09-03 08:34:52.076320: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
+[08:34:52] OpenCV 4.9.0 — Haar=yes  DNN=yes                  face_detector.py:94
+============================= test session starts ==============================
+platform linux -- Python 3.10.21, pytest-8.0.2, pluggy-1.4.0
+rootdir: /home/runner/work/hh_goa_task3/hh_goa_task3
+configfile: pytest.ini
+plugins: mock-3.12.0, anyio-4.14.2, cov-4.1.0
+collected 14 items
+
+tests/test_blockchain.py [08:34:52] py-solc-x not found — installing …                       deploy.py:70
+[08:34:54] Installing solc 0.8.24 …                                 deploy.py:83
+  0%|          | 0.00/15.0M [00:00<?, ?iB/s] 12%|█▏        | 1.80M/15.0M [00:00<00:00, 18.0MiB/s] 24%|██▍       | 3.60M/15.0M [00:01<00:05, 2.10MiB/s] 29%|██▉       | 4.41M/15.0M [00:02<00:07, 1.44MiB/s] 33%|███▎      | 4.89M/15.0M [00:03<00:08, 1.23MiB/s] 35%|███▍      | 5.21M/15.0M [00:03<00:08, 1.10MiB/s] 36%|███▌      | 5.44M/15.0M [00:03<00:09, 1.04MiB/s] 37%|███▋      | 5.62M/15.0M [00:04<00:09, 995kiB/s]  38%|███▊      | 5.77M/15.0M [00:04<00:09, 945kiB/s] 39%|███▉      | 5.89M/15.0M [00:04<00:10, 897kiB/s] 40%|███▉      | 6.00M/15.0M [00:04<00:10, 863kiB/s] 41%|████      | 6.09M/15.0M [00:04<00:10, 840kiB/s] 41%|████      | 6.18M/15.0M [00:04<00:10, 807kiB/s] 42%|████▏     | 6.26M/15.0M [00:05<00:11, 781kiB/s] 42%|████▏     | 6.34M/15.0M [00:05<00:11, 780kiB/s] 43%|████▎     | 6.42M/15.0M [00:05<00:11, 780kiB/s] 43%|████▎     | 6.50M/15.0M [00:05<00:11, 774kiB/s] 44%|████▍     | 6.57M/15.0M [00:05<00:11, 762kiB/s] 44%|████▍     | 6.65M/15.0M [00:05<00:11, 745kiB/s] 45%|████▍     | 6.72M/15.0M [00:05<00:11, 730kiB/s] 45%|████▌     | 6.80M/15.0M [00:05<00:11, 712kiB/s] 46%|████▌     | 6.87M/15.0M [00:05<00:11, 691kiB/s] 46%|████▌     | 6.94M/15.0M [00:06<00:12, 670kiB/s] 47%|████▋     | 7.01M/15.0M [00:06<00:12, 655kiB/s] 47%|████▋     | 7.07M/15.0M [00:06<00:12, 636kiB/s] 48%|████▊     | 7.14M/15.0M [00:06<00:12, 629kiB/s] 48%|████▊     | 7.20M/15.0M [00:06<00:12, 631kiB/s] 48%|████▊     | 7.27M/15.0M [00:06<00:12, 643kiB/s] 49%|████▉     | 7.33M/15.0M [00:06<00:11, 645kiB/s] 49%|████▉     | 7.41M/15.0M [00:06<00:11, 673kiB/s] 50%|████▉     | 7.48M/15.0M [00:06<00:10, 686kiB/s] 50%|█████     | 7.55M/15.0M [00:06<00:10, 692kiB/s] 51%|█████     | 7.62M/15.0M [00:07<00:10, 690kiB/s] 51%|█████     | 7.69M/15.0M [00:07<00:10, 686kiB/s] 52%|█████▏    | 7.76M/15.0M [00:07<00:10, 679kiB/s] 52%|█████▏    | 7.83M/15.0M [00:07<00:10, 672kiB/s] 53%|█████▎    | 7.90M/15.0M [00:07<00:10, 660kiB/s] 53%|█████▎    | 7.96M/15.0M [00:07<00:10, 647kiB/s] 53%|█████▎    | 8.03M/15.0M [00:07<00:11, 635kiB/s] 54%|█████▍    | 8.09M/15.0M [00:07<00:10, 646kiB/s] 54%|█████▍    | 8.16M/15.0M [00:07<00:10, 656kiB/s] 55%|█████▍    | 8.23M/15.0M [00:07<00:10, 640kiB/s] 55%|█████▌    | 8.29M/15.0M [00:08<00:10, 642kiB/s] 56%|█████▌    | 8.36M/15.0M [00:08<00:10, 634kiB/s] 56%|█████▌    | 8.43M/15.0M [00:08<00:10, 651kiB/s] 57%|█████▋    | 8.50M/15.0M [00:08<00:09, 665kiB/s] 57%|█████▋    | 8.57M/15.0M [00:08<00:09, 670kiB/s] 57%|█████▋    | 8.64M/15.0M [00:08<00:09, 669kiB/s] 58%|█████▊    | 8.70M/15.0M [00:08<00:09, 664kiB/s] 58%|█████▊    | 8.77M/15.0M [00:08<00:09, 658kiB/s] 59%|█████▉    | 8.84M/15.0M [00:08<00:09, 647kiB/s] 59%|█████▉    | 8.90M/15.0M [00:09<00:09, 637kiB/s] 60%|█████▉    | 8.97M/15.0M [00:09<00:09, 626kiB/s] 60%|██████    | 9.03M/15.0M [00:09<00:09, 615kiB/s] 61%|██████    | 9.09M/15.0M [00:09<00:09, 606kiB/s] 61%|██████    | 9.15M/15.0M [00:09<00:09, 594kiB/s] 61%|██████▏   | 9.21M/15.0M [00:09<00:09, 582kiB/s] 62%|██████▏   | 9.27M/15.0M [00:09<00:09, 577kiB/s] 62%|██████▏   | 9.33M/15.0M [00:09<00:09, 590kiB/s] 63%|██████▎   | 9.40M/15.0M [00:09<00:09, 593kiB/s] 63%|██████▎   | 9.46M/15.0M [00:09<00:09, 599kiB/s] 63%|██████▎   | 9.52M/15.0M [00:10<00:08, 618kiB/s] 64%|██████▍   | 9.59M/15.0M [00:10<00:08, 626kiB/s] 64%|██████▍   | 9.65M/15.0M [00:10<00:08, 627kiB/s] 65%|██████▍   | 9.72M/15.0M [00:10<00:08, 624kiB/s] 65%|██████▌   | 9.78M/15.0M [00:10<00:08, 621kiB/s] 66%|██████▌   | 9.84M/15.0M [00:10<00:08, 617kiB/s] 66%|██████▌   | 9.90M/15.0M [00:10<00:08, 600kiB/s] 66%|██████▋   | 9.96M/15.0M [00:10<00:08, 590kiB/s] 67%|██████▋   | 10.0M/15.0M [00:10<00:08, 593kiB/s] 67%|██████▋   | 10.1M/15.0M [00:11<00:08, 578kiB/s] 68%|██████▊   | 10.1M/15.0M [00:11<00:08, 571kiB/s] 68%|██████▊   | 10.2M/15.0M [00:11<00:08, 594kiB/s] 68%|██████▊   | 10.3M/15.0M [00:11<00:07, 614kiB/s] 69%|██████▉   | 10.3M/15.0M [00:11<00:07, 613kiB/s] 69%|██████▉   | 10.4M/15.0M [00:11<00:07, 621kiB/s] 70%|██████▉   | 10.5M/15.0M [00:11<00:07, 622kiB/s] 70%|███████   | 10.5M/15.0M [00:11<00:06, 678kiB/s] 71%|███████   | 10.6M/15.0M [00:11<00:06, 720kiB/s] 71%|███████▏  | 10.7M/15.0M [00:11<00:05, 743kiB/s] 72%|███████▏  | 10.8M/15.0M [00:12<00:05, 743kiB/s] 72%|███████▏  | 10.9M/15.0M [00:12<00:05, 744kiB/s] 73%|███████▎  | 10.9M/15.0M [00:12<00:05, 735kiB/s] 73%|███████▎  | 11.0M/15.0M [00:12<00:05, 733kiB/s] 74%|███████▍  | 11.1M/15.0M [00:12<00:05, 714kiB/s] 74%|███████▍  | 11.2M/15.0M [00:12<00:05, 706kiB/s] 75%|███████▍  | 11.2M/15.0M [00:12<00:05, 691kiB/s] 75%|███████▌  | 11.3M/15.0M [00:12<00:05, 676kiB/s] 76%|███████▌  | 11.4M/15.0M [00:12<00:05, 669kiB/s] 76%|███████▌  | 11.4M/15.0M [00:12<00:05, 679kiB/s] 77%|███████▋  | 11.5M/15.0M [00:13<00:05, 680kiB/s] 77%|███████▋  | 11.6M/15.0M [00:13<00:05, 674kiB/s] 77%|███████▋  | 11.6M/15.0M [00:13<00:05, 665kiB/s] 78%|███████▊  | 11.7M/15.0M [00:13<00:05, 650kiB/s] 78%|███████▊  | 11.8M/15.0M [00:13<00:05, 627kiB/s] 79%|███████▉  | 11.8M/15.0M [00:13<00:05, 608kiB/s] 79%|███████▉  | 11.9M/15.0M [00:13<00:05, 590kiB/s] 80%|███████▉  | 12.0M/15.0M [00:13<00:05, 578kiB/s] 80%|███████▉  | 12.0M/15.0M [00:13<00:05, 565kiB/s] 80%|████████  | 12.1M/15.0M [00:14<00:05, 555kiB/s] 81%|████████  | 12.1M/15.0M [00:14<00:05, 545kiB/s] 81%|████████  | 12.2M/15.0M [00:14<00:05, 535kiB/s] 81%|████████▏ | 12.2M/15.0M [00:14<00:05, 526kiB/s] 82%|████████▏ | 12.3M/15.0M [00:14<00:05, 534kiB/s] 82%|████████▏ | 12.4M/15.0M [00:14<00:04, 539kiB/s] 83%|████████▎ | 12.4M/15.0M [00:14<00:04, 529kiB/s] 83%|████████▎ | 12.5M/15.0M [00:14<00:04, 529kiB/s] 83%|████████▎ | 12.5M/15.0M [00:14<00:04, 529kiB/s] 84%|████████▎ | 12.6M/15.0M [00:14<00:04, 522kiB/s] 84%|████████▍ | 12.6M/15.0M [00:15<00:04, 549kiB/s] 84%|████████▍ | 12.7M/15.0M [00:15<00:04, 572kiB/s] 85%|████████▍ | 12.8M/15.0M [00:15<00:03, 583kiB/s] 85%|████████▌ | 12.8M/15.0M [00:15<00:03, 591kiB/s] 86%|████████▌ | 12.9M/15.0M [00:15<00:03, 593kiB/s] 86%|████████▌ | 12.9M/15.0M [00:15<00:03, 594kiB/s] 87%|████████▋ | 13.0M/15.0M [00:15<00:03, 585kiB/s] 87%|████████▋ | 13.1M/15.0M [00:15<00:03, 575kiB/s] 87%|████████▋ | 13.1M/15.0M [00:15<00:03, 558kiB/s] 88%|████████▊ | 13.2M/15.0M [00:16<00:03, 546kiB/s] 88%|████████▊ | 13.2M/15.0M [00:16<00:03, 539kiB/s] 88%|████████▊ | 13.3M/15.0M [00:16<00:03, 528kiB/s] 89%|████████▉ | 13.3M/15.0M [00:16<00:03, 525kiB/s] 89%|████████▉ | 13.4M/15.0M [00:16<00:03, 534kiB/s] 90%|████████▉ | 13.5M/15.0M [00:16<00:02, 568kiB/s] 90%|█████████ | 13.5M/15.0M [00:16<00:02, 605kiB/s] 90%|█████████ | 13.6M/15.0M [00:16<00:02, 624kiB/s] 91%|█████████ | 13.7M/15.0M [00:16<00:02, 636kiB/s] 91%|█████████▏| 13.7M/15.0M [00:16<00:02, 637kiB/s] 92%|█████████▏| 13.8M/15.0M [00:17<00:01, 630kiB/s] 92%|█████████▏| 13.8M/15.0M [00:17<00:01, 625kiB/s] 93%|█████████▎| 13.9M/15.0M [00:17<00:01, 630kiB/s] 93%|█████████▎| 14.0M/15.0M [00:17<00:01, 627kiB/s] 93%|█████████▎| 14.0M/15.0M [00:17<00:01, 618kiB/s] 94%|█████████▍| 14.1M/15.0M [00:17<00:01, 615kiB/s] 94%|█████████▍| 14.2M/15.0M [00:17<00:01, 611kiB/s] 95%|█████████▍| 14.2M/15.0M [00:17<00:01, 606kiB/s] 95%|█████████▌| 14.3M/15.0M [00:17<00:01, 600kiB/s] 96%|█████████▌| 14.4M/15.0M [00:17<00:01, 594kiB/s] 96%|█████████▌| 14.4M/15.0M [00:18<00:01, 594kiB/s] 96%|█████████▋| 14.5M/15.0M [00:18<00:00, 590kiB/s] 97%|█████████▋| 14.5M/15.0M [00:18<00:00, 580kiB/s] 97%|█████████▋| 14.6M/15.0M [00:18<00:00, 578kiB/s] 98%|█████████▊| 14.6M/15.0M [00:18<00:00, 571kiB/s] 98%|█████████▊| 14.7M/15.0M [00:18<00:00, 589kiB/s] 98%|█████████▊| 14.8M/15.0M [00:18<00:00, 585kiB/s] 99%|█████████▊| 14.8M/15.0M [00:18<00:00, 572kiB/s] 99%|█████████▉| 14.9M/15.0M [00:18<00:00, 559kiB/s] 99%|█████████▉| 14.9M/15.0M [00:19<00:00, 547kiB/s]100%|█████████▉| 15.0M/15.0M [00:19<00:00, 539kiB/s]100%|██████████| 15.0M/15.0M [00:19<00:00, 783kiB/s][08:35:13] Compiling                                               deploy.py:106
+           /home/runner/work/hh_goa_task3/hh_goa_task3/contracts/I              
+           dentityRegistry.sol ...                                              
+           Compiled [OK]  ABI entries: 20  Bytecode size: 5484     deploy.py:124
+           bytes                                                                
+....
+tests/test_face_detector.py [08:35:14] FaceDetector initialised  (OpenCV 4.9.0 —        face_detector.py:176
+           method=Haar)                                                         
+           FaceDetector -> processing                       face_detector.py:296
+           /tmp/pytest-of-runner/pytest-0/test_face_detecto                     
+           r_returns_cro0/dummy.jpg                                             
+           [FALLBACK] Using OpenCV color-histogram          face_detector.py:364
+           similarity — NOT a biometric embedding. Enable                       
+           TensorFlow for DeepFace/ArcFace matching.                            
+           Cascade loaded ->                                face_detector.py:496
+           /opt/hostedtoolcache/Python/3.10.21/x64/lib/pyth                     
+           on3.10/site-packages/cv2/data/haarcascade_fronta                     
+           lface_default.xml                                                    
+           Haar detected face  conf=1.000                   face_detector.py:482
+           Warning: Cropped face appears blurry!            face_detector.py:399
+╭────────────────────────────  [OK] Face Extracted ────────────────────────────╮
+│                                                                              │
+│    Cropped Target       /tmp/pytest-of-runner/pytest-0/test_face_detecto…    │
+│    Bounding Box         x=50  y=50  w=100  h=100                             │
+│    Confidence           1.0000  (100.00%)                                    │
+│    Embedding Method     opencv_histogram_fallback                            │
+│    Embedding Dim.       128-d  (colour histogram NOT biometric)              │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+.           FaceDetector initialised  (OpenCV 4.9.0 —        face_detector.py:176
+           method=Haar)                                                         
+.           FaceDetector initialised  (OpenCV 4.9.0 —        face_detector.py:176
+           method=DeepFace (ArcFace / RetinaFace))                              
+           FaceDetector -> processing                       face_detector.py:296
+           /tmp/pytest-of-runner/pytest-0/test_deepface_pri                     
+           mary_embeddin0/dummy.jpg                                             
+           Warning: Cropped face appears blurry!            face_detector.py:336
+╭────────────────────────────  [OK] Face Extracted ────────────────────────────╮
+│                                                                              │
+│    Cropped Target       /tmp/pytest-of-runner/pytest-0/test_deepface_pri…    │
+│    Bounding Box         x=10  y=10  w=100  h=100                             │
+│    Confidence           0.9900  (99.00%)                                     │
+│    Embedding Method     arcface                                              │
+│    Embedding Dim.       512-d  (biometric)                                   │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+.           Failed to initialize DeepFace/RetinaFace:        face_detector.py:158
+           Tensorflow not found. Falling back to OpenCV.                        
+           FaceDetector initialised  (OpenCV 4.9.0 —        face_detector.py:176
+           method=Haar)                                                         
+           FaceDetector -> processing                       face_detector.py:296
+           /tmp/pytest-of-runner/pytest-0/test_deepface_fal                     
+           lback_on_fail0/dummy.jpg                                             
+           [FALLBACK] Using OpenCV color-histogram          face_detector.py:364
+           similarity — NOT a biometric embedding. Enable                       
+           TensorFlow for DeepFace/ArcFace matching.                            
+           Cascade loaded ->                                face_detector.py:496
+           /opt/hostedtoolcache/Python/3.10.21/x64/lib/pyth                     
+           on3.10/site-packages/cv2/data/haarcascade_fronta                     
+           lface_default.xml                                                    
+           Haar detected face  conf=1.000                   face_detector.py:482
+           Warning: Cropped face appears blurry!            face_detector.py:399
+╭────────────────────────────  [OK] Face Extracted ────────────────────────────╮
+│                                                                              │
+│    Cropped Target       /tmp/pytest-of-runner/pytest-0/test_deepface_fal…    │
+│    Bounding Box         x=50  y=50  w=100  h=100                             │
+│    Confidence           1.0000  (100.00%)                                    │
+│    Embedding Method     opencv_histogram_fallback                            │
+│    Embedding Dim.       128-d  (colour histogram NOT biometric)              │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+.
+tests/test_web_search.py ..[08:35:14] WebSearchEngine → Searching on                      web_search.py:172
+           /tmp/pytest-of-runner/pytest-0/test_serpapi_success                  
+           0/dummy1.jpg                                                         
+           Gathering OSINT matches for face crop...            web_search.py:196
+           SerpAPI returned matches.                           web_search.py:181
+           Searching Bing...                                   web_search.py:185
+           Bing returned matches.                              web_search.py:187
+           Searching Yandex...                                 web_search.py:189
+           Yandex returned matches.                            web_search.py:191
+           ⚠  Thumbnail download failed:                       web_search.py:680
+           HTTPConnectionPool(host='thumb', port=80): Max                       
+           retries exceeded with url: / (Caused by                              
+           NameResolutionError("HTTPConnection(host='thumb',                    
+           port=80): Failed to resolve 'thumb' ([Errno -3]                      
+           Temporary failure in name resolution)"))                             
+                         🔍 Google Lens — OSINT Results                         
+┏━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━┓
+┃ #    ┃ Domain               ┃ Title      ┃   Conf (bps) ┃ URL                ┃
+┡━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━┩
+│ 1    │ ⭐ x.com             │ Test Title │         7000 │ https://x.com/test │
+└──────┴──────────────────────┴────────────┴──────────────┴────────────────────┘
+╭──────────────────────── ✅ Top Identification Match ─────────────────────────╮
+│ Best match:    Test Title                                                    │
+│ Domain:        x.com                                                         │
+│ Confidence:    7000 bps (70.0%)                                              │
+│ Engine:        serpapi+bing+yandex                                           │
+│ Source URL:    https://x.com/test                                            │
+│ Thumbnail:     http://thumb                                                  │
+│ Image bytes:   0 bytes                                                       │
+╰──────────────────────────────────────────────────────────────────────────────╯
+F           WebSearchEngine → Searching on                      web_search.py:172
+           /tmp/pytest-of-runner/pytest-0/test_bing_fallback0/                  
+           dummy2.jpg                                                           
+           Gathering OSINT matches for face crop...            web_search.py:196
+           Searching Bing...                                   web_search.py:185
+           Bing returned matches.                              web_search.py:187
+           Searching Yandex...                                 web_search.py:189
+           Yandex returned matches.                            web_search.py:191
+           ⚠  Thumbnail download failed:                       web_search.py:680
+           HTTPConnectionPool(host='thumb', port=80): Max                       
+           retries exceeded with url: / (Caused by                              
+           NameResolutionError("HTTPConnection(host='thumb',                    
+           port=80): Failed to resolve 'thumb' ([Errno -3]                      
+           Temporary failure in name resolution)"))                             
+                         🔍 Google Lens — OSINT Results                         
+┏━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┓
+┃ #    ┃ Domain               ┃ Title          ┃   Conf (bps) ┃ URL            ┃
+┡━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━┩
+│ 1    │ ⭐ x.com             │ Test Title     │         6000 │ https://x.com… │
+│      │                      │ Bing           │              │                │
+└──────┴──────────────────────┴────────────────┴──────────────┴────────────────┘
+╭──────────────────────── ✅ Top Identification Match ─────────────────────────╮
+│ Best match:    Test Title Bing                                               │
+│ Domain:        x.com                                                         │
+│ Confidence:    6000 bps (60.0%)                                              │
+│ Engine:        bing+yandex                                                   │
+│ Source URL:    https://x.com/bing                                            │
+│ Thumbnail:     http://thumb                                                  │
+│ Image bytes:   0 bytes                                                       │
+╰──────────────────────────────────────────────────────────────────────────────╯
+F           WebSearchEngine → Searching on                      web_search.py:172
+           /tmp/pytest-of-runner/pytest-0/test_yandex_fallback                  
+           0/dummy3.jpg                                                         
+           Gathering OSINT matches for face crop...            web_search.py:196
+           Searching Bing...                                   web_search.py:185
+           Searching Yandex...                                 web_search.py:189
+           Yandex returned matches.                            web_search.py:191
+           ⚠  Thumbnail download failed:                       web_search.py:680
+           HTTPConnectionPool(host='thumb', port=80): Max                       
+           retries exceeded with url: / (Caused by                              
+           NameResolutionError("HTTPConnection(host='thumb',                    
+           port=80): Failed to resolve 'thumb' ([Errno -3]                      
+           Temporary failure in name resolution)"))                             
+                         🔍 Google Lens — OSINT Results                         
+┏━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┓
+┃ #    ┃ Domain               ┃ Title          ┃   Conf (bps) ┃ URL            ┃
+┡━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━┩
+│ 1    │ ⭐ x.com             │ Test Title     │         5000 │ https://x.com… │
+│      │                      │ Yandex         │              │                │
+└──────┴──────────────────────┴────────────────┴──────────────┴────────────────┘
+╭──────────────────────── ✅ Top Identification Match ─────────────────────────╮
+│ Best match:    Test Title Yandex                                             │
+│ Domain:        x.com                                                         │
+│ Confidence:    5000 bps (50.0%)                                              │
+│ Engine:        yandex                                                        │
+│ Source URL:    https://x.com/yandex                                          │
+│ Thumbnail:     http://thumb                                                  │
+│ Image bytes:   0 bytes                                                       │
+╰──────────────────────────────────────────────────────────────────────────────╯
+.           WebSearchEngine → Searching on                      web_search.py:172
+           /tmp/pytest-of-runner/pytest-0/test_all_fail0/dummy                  
+           4.jpg                                                                
+           Gathering OSINT matches for face crop...            web_search.py:196
+           Searching Bing...                                   web_search.py:185
+           Searching Yandex...                                 web_search.py:189
+╭─────────────────────────────── ⚠  No Matches ────────────────────────────────╮
+│ Search engines returned no visual matches for this image.                    │
+│ • Ensure the face crop is clear and well-lit.                                │
+│ • The person may not have a public web presence.                             │
+╰──────────────────────────────────────────────────────────────────────────────╯
+.
