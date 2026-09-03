@@ -1,4 +1,4 @@
-[06:41:59] OpenCV 4.14.0 — Haar=yes  DNN=yes                 face_detector.py:94
+[07:22:06] OpenCV 4.14.0 — Haar=yes  DNN=yes                 face_detector.py:94
 ============================= test session starts ==============================
 platform linux -- Python 3.12.14, pytest-8.0.2, pluggy-1.4.0
 rootdir: /home/runner/work/hh_goa_task3/hh_goa_task3
@@ -6,15 +6,15 @@ configfile: pytest.ini
 plugins: mock-3.12.0, anyio-4.14.2, cov-4.1.0
 collected 14 items
 
-tests/test_blockchain.py [06:41:59] py-solc-x not found — installing …                       deploy.py:70
-[06:42:01] Installing solc 0.8.24 …                                 deploy.py:83
-           Compiling                                               deploy.py:106
+tests/test_blockchain.py [07:22:06] py-solc-x not found — installing …                       deploy.py:70
+[07:22:08] Installing solc 0.8.24 …                                 deploy.py:83
+[07:22:09] Compiling                                               deploy.py:106
            /home/runner/work/hh_goa_task3/hh_goa_task3/contracts/I              
            dentityRegistry.sol ...                                              
            Compiled [OK]  ABI entries: 20  Bytecode size: 5484     deploy.py:124
            bytes                                                                
 ....
-tests/test_face_detector.py [06:42:02] FaceDetector initialised  (OpenCV 4.14.0 —       face_detector.py:176
+tests/test_face_detector.py [07:22:09] FaceDetector initialised  (OpenCV 4.14.0 —       face_detector.py:176
            method=Haar)                                                         
            FaceDetector -> processing                       face_detector.py:266
            /tmp/pytest-of-runner/pytest-0/test_face_detecto                     
@@ -80,7 +80,7 @@ tests/test_face_detector.py [06:42:02] FaceDetector initialised  (OpenCV 4.14.0 
 │                                                                              │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 .
-tests/test_web_search.py ..[06:42:02] WebSearchEngine → Searching on                      web_search.py:172
+tests/test_web_search.py ..[07:22:10] WebSearchEngine → Searching on                      web_search.py:172
            /tmp/pytest-of-runner/pytest-0/test_serpapi_success                  
            0/dummy1.jpg                                                         
            SerpAPI returned matches. Skipping fallbacks.       web_search.py:183
