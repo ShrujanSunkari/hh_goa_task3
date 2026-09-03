@@ -159,6 +159,7 @@ Proof certificate written to: proofs/proof_1788377196.txt
 
 - Python **3.10** (recommended, pinned via `.python-version`, Dockerfile, and CI)
 - `pip`
+- Node.js + `npm` (required to install OpenZeppelin smart contracts)
 - A free [SerpAPI](https://serpapi.com/) account (100 free searches/month)
 - *(Optional)* Infura / Alchemy project ID for Sepolia testnet
 
@@ -216,6 +217,12 @@ CONTRACT_ADDRESS=
 
 ### 3 · Deploy the Smart Contract
 
+First, install the required Solidity dependencies:
+```bash
+npm install
+```
+
+Then compile and deploy the contract:
 ```bash
 # Local in-process demo (zero cost, no keys needed):
 python deploy.py

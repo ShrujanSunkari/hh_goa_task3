@@ -22,7 +22,7 @@ On-chain verification compares the local hash against the stored hash, mathemati
 ## Known Vulnerabilities and Accepted Risks
 This project relies on `tensorflow-cpu==2.15.0` (and its dependencies like `keras` and `protobuf`) for the DeepFace ArcFace backend on Python 3.10 and 3.11.
 
-There are known CVEs associated with TensorFlow 2.15.0 and its pinned dependency versions (e.g., Keras 2.15.0, protobuf 4.25.x). 
+There are currently 31 known vulnerabilities reported by `pip-audit` across 7 packages associated with the locked dependencies (e.g., `keras`, `protobuf`, `black`, `cryptography`, `pytest`, `setuptools`, and `wheel`). 
 However, **we accept this risk** because:
 1. TensorFlow 2.16+ introduces Keras 3.0 breaking changes that currently break the `deepface` library.
 2. The vulnerable components (TensorFlow/Keras/protobuf, used only for local ArcFace inference on user-supplied local images) do not process any data received from this project's own network calls (SerpAPI/Bing/Yandex reverse-image search, or the Ethereum RPC connection). The CVEs in question are therefore not reachable through this application's actual attack surface, even though the app does make outbound network calls for OSINT search and blockchain anchoring.
