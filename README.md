@@ -260,6 +260,12 @@ The ABI and deployed address are automatically saved to:
 python pipeline.py --image inputs/sample.jpg --top-n 5
 ```
 
+**Best Accurate Approach** (for highest precision matching on social profiles):
+To maximize accuracy for real OSINT targets, run the pipeline with the default settings. The system will concurrently search the full image and the biometric face crop, merging results and heavily prioritizing actual social profiles (like LinkedIn `/in/`) over generic posts.
+```bash
+python pipeline.py --image inputs/target_person.jpg --top-n 5
+```
+
 **Offline demo / screen recording** (no API keys, no network):
 
 ```bash
@@ -406,6 +412,7 @@ The hash is **deterministic** — given the same URL, image, and metadata, any p
 |---|---|---|
 | **TensorFlow / Python version** | DeepFace/ArcFace unavailable on Python 3.12+; OpenCV Haar Cascade fallback is used automatically. Current local dev environment runs Python 3.14 | Use Python 3.10 (pinned in `.python-version`, Dockerfile, CI) with `pip install -r requirements.txt` for ArcFace embeddings |
 | **API rate limits** | SerpAPI, Bing, and Yandex have rate limits and require keys | Use `--offline-mock` for local zero-cost demos |
+| **Famous Personalities (Google Lens)** | Highly popular characters (e.g., celebrities, actors) may sometimes return 0 results because Google Lens replaces standard visual matches with an "AI Overview", which SerpAPI currently omits from image results. | Pipeline is optimized for everyday OSINT targets. For celebrities, fallback engines (Bing/Yandex) are required. |
 | **Face recognition accuracy** | Identical twins, heavy makeup, low-res images reduce accuracy | Require minimum crop resolution |
 | **OSINT coverage** | Subjects without a public web presence return no matches | Expand to PimEyes or dedicated face-search APIs |
 | **On-chain privacy (demo mode)** | With `--demo-mode`, `sourceUrl` and `confidenceBps` are stored in plaintext on-chain. **Default (no flag) is privacy-preserving**: only a Keccak256 hash is stored | Omit `--demo-mode` (default) for production; the pipeline prints a green banner confirming which mode is active |
