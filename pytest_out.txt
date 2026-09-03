@@ -1,20 +1,28 @@
-[06:41:59] OpenCV 4.14.0 — Haar=yes  DNN=yes                 face_detector.py:94
+2026-09-03 07:17:48.767391: I external/local_tsl/tsl/cuda/cudart_stub.cc:31] Could not find cuda drivers on your machine, GPU will not be used.
+2026-09-03 07:17:48.797002: E external/local_xla/xla/stream_executor/cuda/cuda_dnn.cc:9261] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+2026-09-03 07:17:48.797051: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:607] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+2026-09-03 07:17:48.797884: E external/local_xla/xla/stream_executor/cuda/cuda_blas.cc:1515] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+2026-09-03 07:17:48.803117: I external/local_tsl/tsl/cuda/cudart_stub.cc:31] Could not find cuda drivers on your machine, GPU will not be used.
+2026-09-03 07:17:48.803339: I tensorflow/core/platform/cpu_feature_guard.cc:182] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2026-09-03 07:17:50.420504: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
+[07:17:51] OpenCV 4.9.0 — Haar=yes  DNN=yes                  face_detector.py:94
 ============================= test session starts ==============================
-platform linux -- Python 3.12.14, pytest-8.0.2, pluggy-1.4.0
+platform linux -- Python 3.10.21, pytest-8.0.2, pluggy-1.4.0
 rootdir: /home/runner/work/hh_goa_task3/hh_goa_task3
 configfile: pytest.ini
 plugins: mock-3.12.0, anyio-4.14.2, cov-4.1.0
 collected 14 items
 
-tests/test_blockchain.py [06:41:59] py-solc-x not found — installing …                       deploy.py:70
-[06:42:01] Installing solc 0.8.24 …                                 deploy.py:83
-           Compiling                                               deploy.py:106
+tests/test_blockchain.py [07:17:51] py-solc-x not found — installing …                       deploy.py:70
+[07:17:52] Installing solc 0.8.24 …                                 deploy.py:83
+  0%|          | 0.00/15.0M [00:00<?, ?iB/s]  7%|▋         | 1.12M/15.0M [00:00<00:01, 11.1MiB/s] 15%|█▍        | 2.23M/15.0M [00:00<00:01, 7.04MiB/s] 20%|██        | 3.01M/15.0M [00:00<00:03, 3.20MiB/s] 23%|██▎       | 3.52M/15.0M [00:01<00:05, 1.96MiB/s] 26%|██▌       | 3.86M/15.0M [00:01<00:06, 1.59MiB/s] 27%|██▋       | 4.11M/15.0M [00:02<00:08, 1.36MiB/s] 29%|██▊       | 4.31M/15.0M [00:02<00:08, 1.26MiB/s] 30%|██▉       | 4.47M/15.0M [00:02<00:09, 1.16MiB/s] 31%|███       | 4.60M/15.0M [00:02<00:09, 1.14MiB/s] 31%|███▏      | 4.73M/15.0M [00:02<00:09, 1.12MiB/s] 32%|███▏      | 4.84M/15.0M [00:02<00:09, 1.08MiB/s] 33%|███▎      | 4.96M/15.0M [00:02<00:09, 1.04MiB/s] 34%|███▎      | 5.06M/15.0M [00:03<00:09, 999kiB/s]  34%|███▍      | 5.16M/15.0M [00:03<00:10, 918kiB/s] 35%|███▍      | 5.25M/15.0M [00:03<00:11, 852kiB/s] 36%|███▌      | 5.34M/15.0M [00:03<00:11, 842kiB/s] 36%|███▌      | 5.42M/15.0M [00:03<00:11, 813kiB/s] 37%|███▋      | 5.50M/15.0M [00:03<00:12, 788kiB/s] 37%|███▋      | 5.58M/15.0M [00:03<00:12, 757kiB/s] 38%|███▊      | 5.66M/15.0M [00:03<00:12, 757kiB/s] 38%|███▊      | 5.76M/15.0M [00:03<00:11, 815kiB/s] 39%|███▉      | 5.84M/15.0M [00:04<00:11, 815kiB/s] 39%|███▉      | 5.92M/15.0M [00:04<00:11, 814kiB/s] 40%|████      | 6.01M/15.0M [00:04<00:10, 850kiB/s] 41%|████      | 6.10M/15.0M [00:04<00:10, 824kiB/s] 41%|████      | 6.18M/15.0M [00:04<00:11, 768kiB/s] 42%|████▏     | 6.27M/15.0M [00:04<00:11, 786kiB/s] 42%|████▏     | 6.37M/15.0M [00:04<00:10, 846kiB/s] 43%|████▎     | 6.47M/15.0M [00:04<00:09, 884kiB/s] 44%|████▎     | 6.57M/15.0M [00:04<00:09, 924kiB/s] 44%|████▍     | 6.66M/15.0M [00:05<00:08, 929kiB/s] 45%|████▌     | 6.77M/15.0M [00:05<00:08, 956kiB/s] 46%|████▌     | 6.86M/15.0M [00:05<00:08, 911kiB/s] 46%|████▋     | 6.96M/15.0M [00:05<00:08, 901kiB/s] 47%|████▋     | 7.05M/15.0M [00:05<00:09, 856kiB/s] 48%|████▊     | 7.14M/15.0M [00:05<00:08, 879kiB/s] 48%|████▊     | 7.23M/15.0M [00:05<00:09, 810kiB/s] 49%|████▊     | 7.32M/15.0M [00:05<00:09, 824kiB/s] 49%|████▉     | 7.40M/15.0M [00:05<00:09, 781kiB/s] 50%|████▉     | 7.48M/15.0M [00:06<00:09, 769kiB/s] 50%|█████     | 7.56M/15.0M [00:06<00:09, 765kiB/s] 51%|█████     | 7.63M/15.0M [00:06<00:09, 739kiB/s] 51%|█████▏    | 7.71M/15.0M [00:06<00:09, 740kiB/s] 52%|█████▏    | 7.79M/15.0M [00:06<00:09, 753kiB/s] 52%|█████▏    | 7.87M/15.0M [00:06<00:10, 702kiB/s] 53%|█████▎    | 7.94M/15.0M [00:06<00:09, 712kiB/s] 53%|█████▎    | 8.02M/15.0M [00:06<00:09, 738kiB/s] 54%|█████▍    | 8.10M/15.0M [00:06<00:09, 743kiB/s] 54%|█████▍    | 8.17M/15.0M [00:06<00:09, 719kiB/s] 55%|█████▍    | 8.24M/15.0M [00:07<00:09, 688kiB/s] 55%|█████▌    | 8.31M/15.0M [00:07<00:09, 676kiB/s] 56%|█████▌    | 8.38M/15.0M [00:07<00:09, 669kiB/s] 56%|█████▋    | 8.45M/15.0M [00:07<00:09, 675kiB/s] 57%|█████▋    | 8.52M/15.0M [00:07<00:09, 674kiB/s] 57%|█████▋    | 8.59M/15.0M [00:07<00:09, 679kiB/s] 58%|█████▊    | 8.66M/15.0M [00:07<00:09, 683kiB/s] 58%|█████▊    | 8.73M/15.0M [00:07<00:09, 682kiB/s] 59%|█████▊    | 8.80M/15.0M [00:07<00:09, 678kiB/s] 59%|█████▉    | 8.87M/15.0M [00:08<00:08, 685kiB/s] 59%|█████▉    | 8.94M/15.0M [00:08<00:08, 677kiB/s] 60%|█████▉    | 9.01M/15.0M [00:08<00:08, 674kiB/s] 60%|██████    | 9.07M/15.0M [00:08<00:08, 670kiB/s] 61%|██████    | 9.14M/15.0M [00:08<00:08, 668kiB/s] 61%|██████▏   | 9.21M/15.0M [00:08<00:08, 676kiB/s] 62%|██████▏   | 9.28M/15.0M [00:08<00:08, 676kiB/s] 62%|██████▏   | 9.35M/15.0M [00:08<00:08, 648kiB/s] 63%|██████▎   | 9.41M/15.0M [00:08<00:08, 630kiB/s] 63%|██████▎   | 9.48M/15.0M [00:08<00:08, 639kiB/s] 64%|██████▎   | 9.54M/15.0M [00:09<00:08, 643kiB/s] 64%|██████▍   | 9.61M/15.0M [00:09<00:08, 636kiB/s] 64%|██████▍   | 9.67M/15.0M [00:09<00:08, 613kiB/s] 65%|██████▍   | 9.74M/15.0M [00:09<00:08, 598kiB/s] 65%|██████▌   | 9.80M/15.0M [00:09<00:08, 616kiB/s] 66%|██████▌   | 9.87M/15.0M [00:09<00:08, 620kiB/s] 66%|██████▌   | 9.94M/15.0M [00:09<00:07, 662kiB/s] 67%|██████▋   | 10.0M/15.0M [00:09<00:07, 691kiB/s] 67%|██████▋   | 10.1M/15.0M [00:09<00:06, 716kiB/s] 68%|██████▊   | 10.2M/15.0M [00:09<00:06, 728kiB/s] 68%|██████▊   | 10.2M/15.0M [00:10<00:06, 730kiB/s] 69%|██████▊   | 10.3M/15.0M [00:10<00:06, 730kiB/s] 69%|██████▉   | 10.4M/15.0M [00:10<00:06, 711kiB/s] 70%|██████▉   | 10.5M/15.0M [00:10<00:06, 706kiB/s] 70%|███████   | 10.5M/15.0M [00:10<00:06, 736kiB/s] 71%|███████   | 10.6M/15.0M [00:10<00:05, 747kiB/s] 71%|███████▏  | 10.7M/15.0M [00:10<00:05, 752kiB/s] 72%|███████▏  | 10.8M/15.0M [00:10<00:05, 763kiB/s] 72%|███████▏  | 10.9M/15.0M [00:10<00:05, 766kiB/s] 73%|███████▎  | 10.9M/15.0M [00:11<00:05, 769kiB/s] 73%|███████▎  | 11.0M/15.0M [00:11<00:05, 769kiB/s] 74%|███████▍  | 11.1M/15.0M [00:11<00:05, 760kiB/s] 74%|███████▍  | 11.2M/15.0M [00:11<00:05, 757kiB/s] 75%|███████▍  | 11.2M/15.0M [00:11<00:04, 758kiB/s] 75%|███████▌  | 11.3M/15.0M [00:11<00:04, 761kiB/s] 76%|███████▌  | 11.4M/15.0M [00:11<00:04, 751kiB/s] 76%|███████▋  | 11.5M/15.0M [00:11<00:04, 740kiB/s] 77%|███████▋  | 11.6M/15.0M [00:11<00:04, 731kiB/s] 77%|███████▋  | 11.6M/15.0M [00:11<00:04, 725kiB/s] 78%|███████▊  | 11.7M/15.0M [00:12<00:04, 717kiB/s] 78%|███████▊  | 11.8M/15.0M [00:12<00:04, 712kiB/s] 79%|███████▉  | 11.8M/15.0M [00:12<00:04, 701kiB/s] 79%|███████▉  | 11.9M/15.0M [00:12<00:04, 688kiB/s] 80%|███████▉  | 12.0M/15.0M [00:12<00:04, 691kiB/s] 80%|████████  | 12.1M/15.0M [00:12<00:04, 689kiB/s] 81%|████████  | 12.1M/15.0M [00:12<00:04, 681kiB/s] 81%|████████  | 12.2M/15.0M [00:12<00:04, 679kiB/s] 82%|████████▏ | 12.3M/15.0M [00:12<00:04, 669kiB/s] 82%|████████▏ | 12.3M/15.0M [00:12<00:04, 663kiB/s] 83%|████████▎ | 12.4M/15.0M [00:13<00:04, 655kiB/s] 83%|████████▎ | 12.5M/15.0M [00:13<00:03, 647kiB/s] 83%|████████▎ | 12.5M/15.0M [00:13<00:03, 638kiB/s] 84%|████████▍ | 12.6M/15.0M [00:13<00:04, 600kiB/s] 84%|████████▍ | 12.7M/15.0M [00:13<00:04, 585kiB/s] 85%|████████▍ | 12.7M/15.0M [00:13<00:04, 570kiB/s] 85%|████████▌ | 12.8M/15.0M [00:13<00:04, 546kiB/s] 85%|████████▌ | 12.8M/15.0M [00:13<00:04, 520kiB/s] 86%|████████▌ | 12.9M/15.0M [00:13<00:04, 505kiB/s] 86%|████████▌ | 12.9M/15.0M [00:14<00:04, 495kiB/s] 86%|████████▋ | 13.0M/15.0M [00:14<00:04, 508kiB/s] 87%|████████▋ | 13.0M/15.0M [00:14<00:03, 529kiB/s] 87%|████████▋ | 13.1M/15.0M [00:14<00:03, 548kiB/s] 88%|████████▊ | 13.2M/15.0M [00:14<00:03, 554kiB/s] 88%|████████▊ | 13.2M/15.0M [00:14<00:03, 550kiB/s] 88%|████████▊ | 13.3M/15.0M [00:14<00:03, 531kiB/s] 89%|████████▊ | 13.3M/15.0M [00:14<00:03, 543kiB/s] 89%|████████▉ | 13.4M/15.0M [00:14<00:02, 555kiB/s] 90%|████████▉ | 13.4M/15.0M [00:15<00:02, 561kiB/s] 90%|████████▉ | 13.5M/15.0M [00:15<00:02, 549kiB/s] 90%|█████████ | 13.6M/15.0M [00:15<00:02, 532kiB/s] 91%|█████████ | 13.6M/15.0M [00:15<00:02, 520kiB/s] 91%|█████████ | 13.7M/15.0M [00:15<00:02, 517kiB/s] 91%|█████████▏| 13.7M/15.0M [00:15<00:02, 512kiB/s] 92%|█████████▏| 13.8M/15.0M [00:15<00:02, 510kiB/s] 92%|█████████▏| 13.8M/15.0M [00:15<00:02, 508kiB/s] 92%|█████████▏| 13.9M/15.0M [00:15<00:02, 503kiB/s] 93%|█████████▎| 13.9M/15.0M [00:15<00:02, 500kiB/s] 93%|█████████▎| 14.0M/15.0M [00:16<00:02, 494kiB/s] 93%|█████████▎| 14.0M/15.0M [00:16<00:01, 502kiB/s] 94%|█████████▎| 14.1M/15.0M [00:16<00:01, 503kiB/s] 94%|█████████▍| 14.1M/15.0M [00:16<00:01, 480kiB/s] 94%|█████████▍| 14.2M/15.0M [00:16<00:01, 475kiB/s] 95%|█████████▍| 14.2M/15.0M [00:16<00:01, 469kiB/s] 95%|█████████▌| 14.3M/15.0M [00:16<00:01, 469kiB/s] 95%|█████████▌| 14.3M/15.0M [00:16<00:01, 467kiB/s] 96%|█████████▌| 14.4M/15.0M [00:16<00:01, 466kiB/s] 96%|█████████▌| 14.4M/15.0M [00:17<00:01, 461kiB/s] 96%|█████████▋| 14.5M/15.0M [00:17<00:01, 460kiB/s] 97%|█████████▋| 14.5M/15.0M [00:17<00:01, 455kiB/s] 97%|█████████▋| 14.6M/15.0M [00:17<00:01, 450kiB/s] 97%|█████████▋| 14.6M/15.0M [00:17<00:00, 447kiB/s] 97%|█████████▋| 14.6M/15.0M [00:17<00:00, 443kiB/s] 98%|█████████▊| 14.7M/15.0M [00:17<00:00, 446kiB/s] 98%|█████████▊| 14.7M/15.0M [00:17<00:00, 451kiB/s] 98%|█████████▊| 14.8M/15.0M [00:17<00:00, 452kiB/s] 99%|█████████▊| 14.8M/15.0M [00:17<00:00, 450kiB/s] 99%|█████████▉| 14.9M/15.0M [00:18<00:00, 448kiB/s] 99%|█████████▉| 14.9M/15.0M [00:18<00:00, 444kiB/s]100%|█████████▉| 15.0M/15.0M [00:18<00:00, 441kiB/s]100%|█████████▉| 15.0M/15.0M [00:18<00:00, 437kiB/s]100%|██████████| 15.0M/15.0M [00:18<00:00, 817kiB/s][07:18:11] Compiling                                               deploy.py:106
            /home/runner/work/hh_goa_task3/hh_goa_task3/contracts/I              
            dentityRegistry.sol ...                                              
            Compiled [OK]  ABI entries: 20  Bytecode size: 5484     deploy.py:124
            bytes                                                                
 ....
-tests/test_face_detector.py [06:42:02] FaceDetector initialised  (OpenCV 4.14.0 —       face_detector.py:176
+tests/test_face_detector.py [07:18:12] FaceDetector initialised  (OpenCV 4.9.0 —        face_detector.py:176
            method=Haar)                                                         
            FaceDetector -> processing                       face_detector.py:266
            /tmp/pytest-of-runner/pytest-0/test_face_detecto                     
@@ -23,8 +31,8 @@ tests/test_face_detector.py [06:42:02] FaceDetector initialised  (OpenCV 4.14.0 
            similarity — NOT a biometric embedding. Enable                       
            TensorFlow for DeepFace/ArcFace matching.                            
            Cascade loaded ->                                face_detector.py:466
-           /opt/hostedtoolcache/Python/3.12.14/x64/lib/pyth                     
-           on3.12/site-packages/cv2/data/haarcascade_fronta                     
+           /opt/hostedtoolcache/Python/3.10.21/x64/lib/pyth                     
+           on3.10/site-packages/cv2/data/haarcascade_fronta                     
            lface_default.xml                                                    
            Haar detected face  conf=1.000                   face_detector.py:452
            Warning: Cropped face appears blurry!            face_detector.py:369
@@ -37,9 +45,9 @@ tests/test_face_detector.py [06:42:02] FaceDetector initialised  (OpenCV 4.14.0 
 │    Embedding Dim.       128-d  (colour histogram NOT biometric)              │
 │                                                                              │
 ╰──────────────────────────────────────────────────────────────────────────────╯
-.           FaceDetector initialised  (OpenCV 4.14.0 —       face_detector.py:176
+.           FaceDetector initialised  (OpenCV 4.9.0 —        face_detector.py:176
            method=Haar)                                                         
-.           FaceDetector initialised  (OpenCV 4.14.0 —       face_detector.py:176
+.           FaceDetector initialised  (OpenCV 4.9.0 —        face_detector.py:176
            method=DeepFace (ArcFace / RetinaFace))                              
            FaceDetector -> processing                       face_detector.py:266
            /tmp/pytest-of-runner/pytest-0/test_deepface_pri                     
@@ -56,7 +64,7 @@ tests/test_face_detector.py [06:42:02] FaceDetector initialised  (OpenCV 4.14.0 
 ╰──────────────────────────────────────────────────────────────────────────────╯
 .           Failed to initialize DeepFace/RetinaFace:        face_detector.py:158
            Tensorflow not found. Falling back to OpenCV.                        
-           FaceDetector initialised  (OpenCV 4.14.0 —       face_detector.py:176
+           FaceDetector initialised  (OpenCV 4.9.0 —        face_detector.py:176
            method=Haar)                                                         
            FaceDetector -> processing                       face_detector.py:266
            /tmp/pytest-of-runner/pytest-0/test_deepface_fal                     
@@ -65,8 +73,8 @@ tests/test_face_detector.py [06:42:02] FaceDetector initialised  (OpenCV 4.14.0 
            similarity — NOT a biometric embedding. Enable                       
            TensorFlow for DeepFace/ArcFace matching.                            
            Cascade loaded ->                                face_detector.py:466
-           /opt/hostedtoolcache/Python/3.12.14/x64/lib/pyth                     
-           on3.12/site-packages/cv2/data/haarcascade_fronta                     
+           /opt/hostedtoolcache/Python/3.10.21/x64/lib/pyth                     
+           on3.10/site-packages/cv2/data/haarcascade_fronta                     
            lface_default.xml                                                    
            Haar detected face  conf=1.000                   face_detector.py:452
            Warning: Cropped face appears blurry!            face_detector.py:369
@@ -80,7 +88,7 @@ tests/test_face_detector.py [06:42:02] FaceDetector initialised  (OpenCV 4.14.0 
 │                                                                              │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 .
-tests/test_web_search.py ..[06:42:02] WebSearchEngine → Searching on                      web_search.py:172
+tests/test_web_search.py ..[07:18:12] WebSearchEngine → Searching on                      web_search.py:172
            /tmp/pytest-of-runner/pytest-0/test_serpapi_success                  
            0/dummy1.jpg                                                         
            SerpAPI returned matches. Skipping fallbacks.       web_search.py:183
