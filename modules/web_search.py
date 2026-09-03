@@ -402,7 +402,24 @@ class WebSearchEngine:
         console.log("[dim]Uploading face crop to temporary host...[/]")
         fname = os.path.basename(image_path)
 
-        # ── 1. catbox.moe ─────────────────────────────────────────────────────
+        # ── 1. uguu.se ────────────────────────────────────────────────────────
+        try:
+            with open(image_path, "rb") as fh:
+                resp = requests.post(
+                    "https://uguu.se/upload",
+                    files={"files[]": (fname, fh, "image/jpeg")},
+                    timeout=20,
+                )
+            if resp.ok:
+                data = resp.json()
+                if data.get("success") and data.get("files"):
+                    url = data["files"][0]["url"]
+                    console.log(f"[dim]Hosted at: {url}[/]")
+                    return url
+        except Exception:
+            pass
+
+        # ── 2. catbox.moe (often blocks bots) ─────────────────────────────────
         try:
             with open(image_path, "rb") as fh:
                 resp = requests.post(
