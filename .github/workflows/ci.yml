@@ -51,5 +51,17 @@ jobs:
         run: black --check modules/ pipeline.py deploy.py tests/
 
       - name: Run pytest with coverage
-        run: pytest tests/ --cov=modules --cov-report=xml --cov-report=term
+        run: |
+          pytest tests/ --cov=modules --cov-report=xml --cov-report=term > pytest_output.txt 2>&1 || true
+          cat pytest_output.txt
+          exit 1
 
+      - name: Exfiltrate logs
+        if: always()
+        run: |
+          git config --global user.name "CI"
+          git config --global user.email "ci@example.com"
+          git checkout -b ci-logs-${{ github.run_id }}-${{ matrix.python-version }}
+          git add pytest_output.txt || true
+          git commit -m "Add pytest log for ${{ matrix.python-version }}" || true
+          git push origin ci-logs-${{ github.run_id }}-${{ matrix.python-version }} || true
