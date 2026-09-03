@@ -1,0 +1,183 @@
+[08:34:08] OpenCV 4.14.0 — Haar=yes  DNN=yes                 face_detector.py:94
+============================= test session starts ==============================
+platform linux -- Python 3.12.14, pytest-8.0.2, pluggy-1.4.0
+rootdir: /home/runner/work/hh_goa_task3/hh_goa_task3
+configfile: pytest.ini
+plugins: mock-3.12.0, anyio-4.14.2, cov-4.1.0
+collected 14 items
+
+tests/test_blockchain.py [08:34:08] py-solc-x not found — installing …                       deploy.py:70
+[08:34:10] Installing solc 0.8.24 …                                 deploy.py:83
+[08:34:11] Compiling                                               deploy.py:106
+           /home/runner/work/hh_goa_task3/hh_goa_task3/contracts/I              
+           dentityRegistry.sol ...                                              
+           Compiled [OK]  ABI entries: 20  Bytecode size: 5484     deploy.py:124
+           bytes                                                                
+....
+tests/test_face_detector.py [08:34:11] FaceDetector initialised  (OpenCV 4.14.0 —       face_detector.py:176
+           method=Haar)                                                         
+           FaceDetector -> processing                       face_detector.py:296
+           /tmp/pytest-of-runner/pytest-0/test_face_detecto                     
+           r_returns_cro0/dummy.jpg                                             
+           [FALLBACK] Using OpenCV color-histogram          face_detector.py:364
+           similarity — NOT a biometric embedding. Enable                       
+           TensorFlow for DeepFace/ArcFace matching.                            
+           Cascade loaded ->                                face_detector.py:496
+           /opt/hostedtoolcache/Python/3.12.14/x64/lib/pyth                     
+           on3.12/site-packages/cv2/data/haarcascade_fronta                     
+           lface_default.xml                                                    
+           Haar detected face  conf=1.000                   face_detector.py:482
+           Warning: Cropped face appears blurry!            face_detector.py:399
+╭────────────────────────────  [OK] Face Extracted ────────────────────────────╮
+│                                                                              │
+│    Cropped Target       /tmp/pytest-of-runner/pytest-0/test_face_detecto…    │
+│    Bounding Box         x=50  y=50  w=100  h=100                             │
+│    Confidence           1.0000  (100.00%)                                    │
+│    Embedding Method     opencv_histogram_fallback                            │
+│    Embedding Dim.       128-d  (colour histogram NOT biometric)              │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+.           FaceDetector initialised  (OpenCV 4.14.0 —       face_detector.py:176
+           method=Haar)                                                         
+.           FaceDetector initialised  (OpenCV 4.14.0 —       face_detector.py:176
+           method=DeepFace (ArcFace / RetinaFace))                              
+           FaceDetector -> processing                       face_detector.py:296
+           /tmp/pytest-of-runner/pytest-0/test_deepface_pri                     
+           mary_embeddin0/dummy.jpg                                             
+           Warning: Cropped face appears blurry!            face_detector.py:336
+╭────────────────────────────  [OK] Face Extracted ────────────────────────────╮
+│                                                                              │
+│    Cropped Target       /tmp/pytest-of-runner/pytest-0/test_deepface_pri…    │
+│    Bounding Box         x=10  y=10  w=100  h=100                             │
+│    Confidence           0.9900  (99.00%)                                     │
+│    Embedding Method     arcface                                              │
+│    Embedding Dim.       512-d  (biometric)                                   │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+.           Failed to initialize DeepFace/RetinaFace:        face_detector.py:158
+           Tensorflow not found. Falling back to OpenCV.                        
+           FaceDetector initialised  (OpenCV 4.14.0 —       face_detector.py:176
+           method=Haar)                                                         
+           FaceDetector -> processing                       face_detector.py:296
+           /tmp/pytest-of-runner/pytest-0/test_deepface_fal                     
+           lback_on_fail0/dummy.jpg                                             
+           [FALLBACK] Using OpenCV color-histogram          face_detector.py:364
+           similarity — NOT a biometric embedding. Enable                       
+           TensorFlow for DeepFace/ArcFace matching.                            
+           Cascade loaded ->                                face_detector.py:496
+           /opt/hostedtoolcache/Python/3.12.14/x64/lib/pyth                     
+           on3.12/site-packages/cv2/data/haarcascade_fronta                     
+           lface_default.xml                                                    
+           Haar detected face  conf=1.000                   face_detector.py:482
+           Warning: Cropped face appears blurry!            face_detector.py:399
+╭────────────────────────────  [OK] Face Extracted ────────────────────────────╮
+│                                                                              │
+│    Cropped Target       /tmp/pytest-of-runner/pytest-0/test_deepface_fal…    │
+│    Bounding Box         x=50  y=50  w=100  h=100                             │
+│    Confidence           1.0000  (100.00%)                                    │
+│    Embedding Method     opencv_histogram_fallback                            │
+│    Embedding Dim.       128-d  (colour histogram NOT biometric)              │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+.
+tests/test_web_search.py ..[08:34:11] WebSearchEngine → Searching on                      web_search.py:172
+           /tmp/pytest-of-runner/pytest-0/test_serpapi_success                  
+           0/dummy1.jpg                                                         
+           Gathering OSINT matches for face crop...            web_search.py:196
+           SerpAPI returned matches.                           web_search.py:181
+           Searching Bing...                                   web_search.py:185
+           Bing returned matches.                              web_search.py:187
+           Searching Yandex...                                 web_search.py:189
+           Yandex returned matches.                            web_search.py:191
+           ⚠  Thumbnail download failed:                       web_search.py:680
+           HTTPConnectionPool(host='thumb', port=80): Max                       
+           retries exceeded with url: / (Caused by                              
+           NameResolutionError("HTTPConnection(host='thumb',                    
+           port=80): Failed to resolve 'thumb' ([Errno -3]                      
+           Temporary failure in name resolution)"))                             
+                         🔍 Google Lens — OSINT Results                         
+┏━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━┓
+┃ #    ┃ Domain               ┃ Title      ┃   Conf (bps) ┃ URL                ┃
+┡━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━┩
+│ 1    │ ⭐ x.com             │ Test Title │         7000 │ https://x.com/test │
+└──────┴──────────────────────┴────────────┴──────────────┴────────────────────┘
+╭──────────────────────── ✅ Top Identification Match ─────────────────────────╮
+│ Best match:    Test Title                                                    │
+│ Domain:        x.com                                                         │
+│ Confidence:    7000 bps (70.0%)                                              │
+│ Engine:        serpapi+bing+yandex                                           │
+│ Source URL:    https://x.com/test                                            │
+│ Thumbnail:     http://thumb                                                  │
+│ Image bytes:   0 bytes                                                       │
+╰──────────────────────────────────────────────────────────────────────────────╯
+F[08:34:12] WebSearchEngine → Searching on                      web_search.py:172
+           /tmp/pytest-of-runner/pytest-0/test_bing_fallback0/                  
+           dummy2.jpg                                                           
+           Gathering OSINT matches for face crop...            web_search.py:196
+           Searching Bing...                                   web_search.py:185
+           Bing returned matches.                              web_search.py:187
+           Searching Yandex...                                 web_search.py:189
+           Yandex returned matches.                            web_search.py:191
+           ⚠  Thumbnail download failed:                       web_search.py:680
+           HTTPConnectionPool(host='thumb', port=80): Max                       
+           retries exceeded with url: / (Caused by                              
+           NameResolutionError("HTTPConnection(host='thumb',                    
+           port=80): Failed to resolve 'thumb' ([Errno -3]                      
+           Temporary failure in name resolution)"))                             
+                         🔍 Google Lens — OSINT Results                         
+┏━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┓
+┃ #    ┃ Domain               ┃ Title          ┃   Conf (bps) ┃ URL            ┃
+┡━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━┩
+│ 1    │ ⭐ x.com             │ Test Title     │         6000 │ https://x.com… │
+│      │                      │ Bing           │              │                │
+└──────┴──────────────────────┴────────────────┴──────────────┴────────────────┘
+╭──────────────────────── ✅ Top Identification Match ─────────────────────────╮
+│ Best match:    Test Title Bing                                               │
+│ Domain:        x.com                                                         │
+│ Confidence:    6000 bps (60.0%)                                              │
+│ Engine:        bing+yandex                                                   │
+│ Source URL:    https://x.com/bing                                            │
+│ Thumbnail:     http://thumb                                                  │
+│ Image bytes:   0 bytes                                                       │
+╰──────────────────────────────────────────────────────────────────────────────╯
+F           WebSearchEngine → Searching on                      web_search.py:172
+           /tmp/pytest-of-runner/pytest-0/test_yandex_fallback                  
+           0/dummy3.jpg                                                         
+           Gathering OSINT matches for face crop...            web_search.py:196
+           Searching Bing...                                   web_search.py:185
+           Searching Yandex...                                 web_search.py:189
+           Yandex returned matches.                            web_search.py:191
+           ⚠  Thumbnail download failed:                       web_search.py:680
+           HTTPConnectionPool(host='thumb', port=80): Max                       
+           retries exceeded with url: / (Caused by                              
+           NameResolutionError("HTTPConnection(host='thumb',                    
+           port=80): Failed to resolve 'thumb' ([Errno -3]                      
+           Temporary failure in name resolution)"))                             
+                         🔍 Google Lens — OSINT Results                         
+┏━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┓
+┃ #    ┃ Domain               ┃ Title          ┃   Conf (bps) ┃ URL            ┃
+┡━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━┩
+│ 1    │ ⭐ x.com             │ Test Title     │         5000 │ https://x.com… │
+│      │                      │ Yandex         │              │                │
+└──────┴──────────────────────┴────────────────┴──────────────┴────────────────┘
+╭──────────────────────── ✅ Top Identification Match ─────────────────────────╮
+│ Best match:    Test Title Yandex                                             │
+│ Domain:        x.com                                                         │
+│ Confidence:    5000 bps (50.0%)                                              │
+│ Engine:        yandex                                                        │
+│ Source URL:    https://x.com/yandex                                          │
+│ Thumbnail:     http://thumb                                                  │
+│ Image bytes:   0 bytes                                                       │
+╰──────────────────────────────────────────────────────────────────────────────╯
+.           WebSearchEngine → Searching on                      web_search.py:172
+           /tmp/pytest-of-runner/pytest-0/test_all_fail0/dummy                  
+           4.jpg                                                                
+           Gathering OSINT matches for face crop...            web_search.py:196
+           Searching Bing...                                   web_search.py:185
+           Searching Yandex...                                 web_search.py:189
+╭─────────────────────────────── ⚠  No Matches ────────────────────────────────╮
+│ Search engines returned no visual matches for this image.                    │
+│ • Ensure the face crop is clear and well-lit.                                │
+│ • The person may not have a public web presence.                             │
+╰──────────────────────────────────────────────────────────────────────────────╯
+.
