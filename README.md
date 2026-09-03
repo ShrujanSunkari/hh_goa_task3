@@ -107,7 +107,7 @@ sequenceDiagram
 * **Load-Bearing Version Markers**: To support modern Python versions gracefully without crashing pip, `requirements.txt` employs strict environment markers (`python_version < "3.12"`). Python 3.10/3.11 get `tensorflow-cpu`, `deepface`, and `numpy 1.x`, enabling ArcFace. Python 3.12+ skips them and receives `numpy 2.x` and a newer `opencv-python-headless`, cleanly enforcing the OpenCV fallback path.
 * **SHA-256 vs Keccak-256**: SHA-256 is used for the off-chain payload hash because it aligns with standard OSINT and forensic workflows. `bytes32` on-chain comfortably stores it, reducing the need for Solidity-specific tooling (like Keccak) when external auditors verify the proof.
 * **Local EVM vs Sepolia**: The pipeline supports an in-process Py-EVM. This delivers an instant, zero-cost, zero-latency demonstration without requiring testnet ETH, Infura keys, or waiting for block confirmations, while retaining the ability to deploy to the live Sepolia testnet.
-* **Single-engine Search (SerpAPI Google Lens)**: Currently only SerpAPI is queried. Multi-engine fallback (Bing Visual Search, Yandex) is on the roadmap but not yet implemented.
+* **Multi-engine OSINT Search**: SerpAPI Google Lens is the primary engine. Bing Visual Search and Yandex Image Search are fully implemented as automated fallbacks. Bing requires an API key in `.env`, while Yandex triggers as a secondary scraper when SerpAPI fails or returns 0 matches.
 
 ## Live on Sepolia
 [![Contract on Sepolia](https://img.shields.io/badge/Sepolia-Live_Contract-success)](https://sepolia.etherscan.io/address/0xCc67296BFc4d09DE7E930d9f7C2BFE10b6fBfB94)
@@ -376,7 +376,7 @@ mapping(bytes32 => Record) public records
 3. **Immutability via Reverts**: The smart contract maps each `bytes32 dataHash` to a `Record` struct. If a caller attempts to submit a duplicate hash, the `require(!records[dataHash].exists)` statement immediately reverts the transaction.
 4. **Privacy Modes (Production-Recommended)**: Records are submitted with an `isDemoMode` flag.
    - **Demo mode** (`isDemoMode=true`): `sourceUrl` and `confidenceBps` are stored in plaintext on-chain for easy inspection by judges.
-   - **Production mode** (`isDemoMode=false`): Only a Keccak256 `payloadCommitment` hash is stored on-chain; the actual `sourceUrl` and `confidenceBps` are kept off-chain. **This is the production-recommended path** for protecting sensitive OSINT findings.
+   - **Production mode** (`isDemoMode=false`): Only a SHA-256 `payloadCommitment` hash is stored on-chain; the actual `sourceUrl` and `confidenceBps` are kept off-chain. **This is the production-recommended path** for protecting sensitive OSINT findings.
 5. **Off-Chain Storage (IPFS)**: The `metadataURI` field on the registry stores a decentralized reference (CID) to the cropped face via Pinata (IPFS) when `PINATA_API_KEY` is configured. Without Pinata keys the field is left empty and the pipeline continues normally.
 
 **Event**: `RecordRegistered(indexed bytes32 dataHash, bool isDemoMode, uint256 timestamp)` — enables off-chain listeners and block explorers to index all anchored records.
@@ -415,7 +415,7 @@ The hash is **deterministic** — given the same URL, image, and metadata, any p
 | **Famous Personalities (Google Lens)** | Highly popular characters (e.g., celebrities, actors) may sometimes return 0 results because Google Lens replaces standard visual matches with an "AI Overview", which SerpAPI currently omits from image results. | Pipeline is optimized for everyday OSINT targets. For celebrities, fallback engines (Bing/Yandex) are required. |
 | **Face recognition accuracy** | Identical twins, heavy makeup, low-res images reduce accuracy | Require minimum crop resolution |
 | **OSINT coverage** | Subjects without a public web presence return no matches | Expand to PimEyes or dedicated face-search APIs |
-| **On-chain privacy (demo mode)** | With `--demo-mode`, `sourceUrl` and `confidenceBps` are stored in plaintext on-chain. **Default (no flag) is privacy-preserving**: only a Keccak256 hash is stored | Omit `--demo-mode` (default) for production; the pipeline prints a green banner confirming which mode is active |
+| **On-chain privacy (demo mode)** | With `--demo-mode`, `sourceUrl` and `confidenceBps` are stored in plaintext on-chain. **Default (no flag) is privacy-preserving**: only a SHA-256 hash is stored | Omit `--demo-mode` (default) for production; the pipeline prints a green banner confirming which mode is active |
 | **Gas on mainnet** | ~20,000 gas per record; affordable on L2 but costly on L1 | Deploy to Polygon, Arbitrum, or Base |
 
 ---
@@ -485,7 +485,6 @@ To prove this works end-to-end, we provide a Python wrapper script that uses `sn
 
 ### Other Roadmap Items
 
-- [ ] **Multi-engine OSINT** — fallback chain: SerpAPI → Bing Visual Search → Yandex
 - [ ] **Multi-face support** — process group photos and anchor each face independently
 - [ ] **Multi-chain support** — expand anchoring logic to other L2s like Polygon and Arbitrum
 - [ ] **Zero-knowledge proof integration** — transition from hash-based evidence to true ZKP circuits
