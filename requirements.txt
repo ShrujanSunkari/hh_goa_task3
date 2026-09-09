@@ -62,4 +62,4 @@ hexbytes==2.0.0
 lru-dict==1.4.1
 pycryptodome==3.23.0
 rlp==5.0.0
-websockets==15.0.1
+websockets==16.1.1
