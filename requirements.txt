@@ -7,7 +7,7 @@
 # opencv-python is listed (same version) so deepface's transitive dep
 # resolves to the headless wheels already installed, avoiding the Windows
 # file-lock conflict between opencv-python and opencv-python-headless.
-opencv-python-headless==4.9.0.80; python_version < "3.12"
+opencv-python-headless==5.0.0.93; python_version < "3.12"
 opencv-python-headless>=4.10.0.84,<5.0.0; python_version >= "3.12"
 opencv-python==4.9.0.80; python_version < "3.12"
 tensorflow-cpu==2.15.0; python_version < "3.12"
